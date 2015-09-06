@@ -1,0 +1,13 @@
+[Unit]
+Description=Watch game prices on Steam store
+Wants=timer-hourly.target
+After=network.target
+
+[Service]
+Nice=19
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+ExecStart=/home/akeil/.venvs/remindme/bin/steamwatch fetch --quiet
+
+[Install]
+WantedBy=timer-hourly.target
