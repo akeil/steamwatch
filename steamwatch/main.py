@@ -254,12 +254,12 @@ def fetch(subs, common):
             for game in options.games:
                 try:
                     g = app.get(game)
-                    app.update(g)
+                    app.fetch(g)
                 except NotFoundError:
                     log.warning(
                         'Game with id {g!r} is not watched'.format(g=game))
         else:
-            app.update_all()
+            app.fetch_all()
 
     fetch.set_defaults(func=do_fetch)
 

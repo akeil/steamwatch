@@ -77,13 +77,13 @@ class Application(object):
             game.enabled = enabled
             self.db.store(game)
 
-    def update_all(self):
+    def fetch_all(self):
         '''Update measures for all enabled Games.'''
         games = self.db.select(Game, enabled=True)
         for game in games:
-            self.update(game)
+            self.fetch(game)
 
-    def update(self, game):
+    def fetch(self, game):
         '''Update measures for the given Game.'''
         if not game.enabled:
             log.warning('{g!r} is disabled and will not be updated.'.format(
