@@ -183,6 +183,7 @@ def setup_argparser():
 
     subs = parser.add_subparsers()
     watch(subs, common)
+    ls(subs, common)
     fetch(subs, common)
     report(subs, common)
 
@@ -193,7 +194,6 @@ def setup_argparser():
 
 
 def watch(subs, common):
-
     watch = subs.add_parser(
         'watch',
         parents=[common, ],
@@ -216,6 +216,25 @@ def watch(subs, common):
         app.add(options.appid, threshold=options.threshold)
 
     watch.set_defaults(func=do_watch)
+
+
+def ls(subs, common):
+    ls = subs.add_parser(
+        'ls',
+        parents=[common, ],
+        help='List watched games'
+    )
+
+    def do_ls(app, options):
+        _render_games(app.ls())
+
+    ls.set_defaults(func=do_ls)
+
+
+def _render_games(games):
+    for game in games:
+        print('{e} [{g.appid: >6}] {g.name}'.format(
+            g=game, e='*' if game.enabled else '-'))
 
 
 def fetch(subs, common):
