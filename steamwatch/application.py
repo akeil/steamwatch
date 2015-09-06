@@ -58,6 +58,10 @@ class Application(object):
         '''
         return self.db.select_one(Game, appid=appid)
 
+    def ls(self):
+        '''List games'''
+        return self.db.select(Game)
+
     def disable(self, appid):
         '''Stop watching the given ``appid``, but do not delete it.'''
         self._set_enabled(appid, False)
