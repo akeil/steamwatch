@@ -192,9 +192,7 @@ class Database(object):
         sql = insert.format(table=table,placeholders=placeholders)
         cursor = self._exec(sql, params)
         instance.id = cursor.lastrowid
-
-        log.debug('Rowcount: {}'.format(cursor.rowcount))
-        log.debug('Inserted row ID: {}'.format(cursor.lastrowid))
+        log.debug('Inserted row {i} into {t!r}'.format(i=instance.id, t=table))
 
     def _update(self, instance):
         update = 'UPDATE {table} SET {placeholders} WHERE id=?'
@@ -215,6 +213,8 @@ class Database(object):
 
         if cursor.rowcount == 0:
             raise NotFoundError
+
+        log.debug('Updated row {i} in {t!r}'.format(i=instance.id, t=table))
 
     def select(self, modelclass, **kwargs):
         cursor = self._do_select(modelclass, **kwargs)
