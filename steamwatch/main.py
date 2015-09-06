@@ -23,6 +23,7 @@ except ImportError:
 
 import steamwatch
 from steamwatch import application
+from steamwatch.models import NotFoundError
 from steamwatch.exceptions import ConfigurationError
 
 
@@ -108,21 +109,7 @@ def run(options):
         and from the config file(s).
     '''
     app = application.Application(options.db_path)
-
-    if options.add:
-        app.add(options.add)
-    if options.update:
-        app.update_all()
-    if options.report:
-        reports = app.report_all()
-        _print_report(reports)
-
-
-def _print_report(reports):
-    for game, measures in reports.items():
-        print('{} [{}]'.format(game.name, game.appid))
-        for m in measures:
-            print('  {} {}'.format(m.datetaken, m.price))
+    return options.func(app, options)
 
 
 # Argument parser ------------------------------------------------------------
@@ -151,19 +138,21 @@ def setup_argparser():
         help='Print version number and exit.'
     )
 
-    parser.add_argument(
+    common = argparse.ArgumentParser(add_help=False)
+
+    common.add_argument(
         '-v', '--verbose',
         action='store_true',
         help='Increase console output.',
     )
 
-    parser.add_argument(
+    common.add_argument(
         '-q', '--quiet',
         action='store_true',
         help='Write nothing to stdout.',
     )
 
-    parser.add_argument(
+    common.add_argument(
         '-l', '--logfile',
         help=('Write logs to the specified file. Use LOGFILE="syslog"'
             ' to write logging output to syslog.')
@@ -183,7 +172,7 @@ def setup_argparser():
             level = loglevels[values]
             setattr(namespace, self.dest, level)
 
-    parser.add_argument(
+    common.add_argument(
         '--log-level',
         action=LogLevelAction,
         default=logging.WARNING,
@@ -192,38 +181,108 @@ def setup_argparser():
             ' Defaults to {default}.').format(default=DEFAULT_LOG_LEVEL),
     )
 
-    _add_arg(parser)
-    _update_arg(parser)
-    _report_arg(parser)
+    subs = parser.add_subparsers()
+    watch(subs, common)
+    fetch(subs, common)
+    report(subs, common)
 
     return parser
 
 
-def _add_arg(parser):
+# Commands --------------------------------------------------------------------
 
-    parser.add_argument(
-        '--add', '-a',
-        metavar='APPID',
-        help=('Add a new game'),
+
+def watch(subs, common):
+
+    watch = subs.add_parser(
+        'watch',
+        parents=[common, ],
+        help='Add a game (appid) to watch'
     )
 
-
-def _update_arg(parser):
-
-    parser.add_argument(
-        '--update', '-u',
-        action='store_true',
-        help=('Omit argument to update all games.'),
+    watch.add_argument(
+        'appid',
+        help=('The id of the game to watch')
     )
 
-
-def _report_arg(parser):
-
-    parser.add_argument(
-        '--report', '-r',
-        action='store_true',
-        help=(''),
+    watch.add_argument(
+        '-t', '--threshold',
+        metavar='PRICE',
+        type=float,
+        help=('Receive a notification if the game drops below this price')
     )
+
+    def do_watch(app, options):
+        app.add(options.appid, threshold=options.threshold)
+
+    watch.set_defaults(func=do_watch)
+
+
+def fetch(subs, common):
+    fetch = subs.add_parser(
+        'fetch',
+        parents=[common, ],
+        help='Fetch prices for watched games from steamstore'
+    )
+
+    fetch.add_argument(
+        '-g', '--games',
+        help=('List of game ids to query. Queries all games if omitted')
+    )
+
+    def do_fetch(app, options):
+        if options.games:
+            for game in options.games:
+                try:
+                    g = app.get(game)
+                    app.update(g)
+                except NotFoundError:
+                    log.warning(
+                        'Game with id {g!r} is not watched'.format(g=game))
+        else:
+            app.update_all()
+
+    fetch.set_defaults(func=do_fetch)
+
+
+def report(subs, common):
+    report = subs.add_parser(
+        'report',
+        parents=[common, ],
+        help='Show measures for watched apps'
+    )
+
+    report.add_argument(
+        '-g', '--games',
+        help=('List of game ids to report. Reports all games if omitted')
+    )
+
+    def do_report(app, options):
+        if options.games:
+            reports = {}
+            for game in options.games:
+                try:
+                    g = app.get(game)
+                    reports[g] = app.report(g)
+                except NotFoundError:
+                    log.warning(
+                        'Game with id {g!r} is not watched'.format(g=game))
+        else:
+            reports = app.report_all()
+
+        _print_reports(reports)
+
+    report.set_defaults(func=do_report)
+
+
+def _print_reports(reports):
+    for game, measures in reports.items():
+        print('{} [{}]'.format(game.name, game.appid))
+        for m in measures:
+            print('  {} {}'.format(m.datetaken, m.price))
+
+
+# Argtypes --------------------------------------------------------------------
 
 
 def _path(argstr):

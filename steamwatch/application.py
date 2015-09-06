@@ -27,7 +27,7 @@ class Application(object):
     def __init__(self, db_path):
         self.db = Database(db_path)
 
-    def add(self, appid):
+    def add(self, appid, threshold=None):
         '''Add a Game to be watched.'''
         results = storeapi.appdetails(appid)
         try:
@@ -36,7 +36,8 @@ class Application(object):
             raise GameNotFoundError('No game with appid {!r}.'.format(appid))
         game = Game(
             appid=appid,
-            name = data.get('name')
+            name = data.get('name'),
+            threshold=threshold,
         )
         # TODO: what if the game exists = sqlite3.IntegrityError?
         self.db.store(game)
