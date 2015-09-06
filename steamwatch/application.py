@@ -41,7 +41,7 @@ class Application(object):
         )
         # TODO: what if the game exists = sqlite3.IntegrityError?
         self.db.store(game)
-        self._signal(SIGNAL_ADDED, gameid=game.id)
+        self._signal(SIGNAL_ADDED, gameid=game.id, appid=game.appid)
 
         self._store_measure(game, data)
         return game
@@ -154,21 +154,22 @@ class Application(object):
         for ep in iter_entry_points(EP_SIGNALS, name=name):
             try:
                 hook = ep.load()
-            except ImportError as e:
+            except (ImportError, SyntaxError) as e:
                 log.error('Failed to load entry point {ep!r}'.format(ep=ep))
                 log.debug(e, exc_info=True)
                 continue
 
             try:
                 kwargs = {k: v for k, v in data.items()}
-                hook(name, **kwargs)
+                hook(name, self, **kwargs)
+                log.debug('Dispatched {n!r} to {ep!r}'.format(n=name, ep=ep))
             except Exception as e:
                 log.error(('Failed to run entry point for {s!r}.'
                     ' Error was: {e!r}').format(s=name, e=e))
                 log.debug(e, exc_info=True)
 
 
-def log_signal(name, **kwargs):
+def log_signal(name, app, **kwargs):
     '''Default hook function for signals.'''
     s = ', '.join(['{k}={v!r}'.format(k=k, v=v) for k, v in kwargs.items()])
     log.debug('Signal {n!r} with {s!r}'.format(n=name, s=s))
