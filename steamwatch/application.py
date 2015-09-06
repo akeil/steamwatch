@@ -26,7 +26,6 @@ class Application(object):
 
     def __init__(self, db_path):
         self.db = Database(db_path)
-        log.debug('db_path: {p!r}'.format(p=db_path))
 
     def add(self, appid):
         '''Add a Game to be watched.'''

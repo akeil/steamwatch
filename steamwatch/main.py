@@ -8,10 +8,14 @@ configures logging
 and runs the program.
 '''
 import argparse
-import sys
-import os
+import io
 import logging
+import os
+import sys
+
 from logging import handlers
+from pkg_resources import resource_stream
+
 try:
     import configparser  # python 3
 except ImportError:
@@ -40,11 +44,6 @@ USER_CONFIG_PATH = os.path.expanduser(
     '~/.config/steamwatch/steamwatch.conf')
 
 DEFAULT_CONFIG_SECTION = 'steamwatch'
-DEFAULT_CONFIG = {
-    DEFAULT_CONFIG_SECTION: {
-        'db_path': '~/.local/share/steamwatch.db'
-    },
-}
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -77,19 +76,14 @@ def main(argv=None):
         argv = sys.argv[1:]
 
     parser = setup_argparser()
-    args = parser.parse_args(argv)
-    cfg = read_config()
-    configure_logging(
-        verbose=args.verbose,
-        quiet=args.quiet,
-        logfile=args.logfile,
-        log_level=args.log_level,
-    )
+    options = read_config()
+    parser.parse_args(argv, namespace=options)
+    configure_logging(options)
 
     log.info('Starting {!r}.'.format(PROG_NAME))
     log.debug('Command line: {!r}.'.format(' '.join(argv)))
     try:
-        run(args, cfg)
+        run(options)
         rv = EXIT_OK
     except KeyboardInterrupt:
         raise
@@ -105,23 +99,21 @@ def main(argv=None):
     return rv
 
 
-def run(args, cfg):
+def run(options):
     '''Run steamwatch with the given command line args
     and config.
 
-    :param object args:
+    :param object options:
         A ``Namespace`` instance with arguments from the command line
-    :param object cfg:
-        A ``ConfigParser`` instance with values from the config file(s).
+        and from the config file(s).
     '''
-    db_path = os.path.expanduser(cfg.get(DEFAULT_CONFIG_SECTION, 'db_path'))
-    app = application.Application(db_path)
+    app = application.Application(options.db_path)
 
-    if args.add:
-        app.add(args.add)
-    if args.update:
+    if options.add:
+        app.add(options.add)
+    if options.update:
         app.update_all()
-    if args.report:
+    if options.report:
         reports = app.report_all()
         _print_report(reports)
 
@@ -200,12 +192,6 @@ def setup_argparser():
             ' Defaults to {default}.').format(default=DEFAULT_LOG_LEVEL),
     )
 
-    parser.add_argument(
-        '--config',
-        type=_path,
-        help='Read configuration from the specified file.',
-    )
-
     _add_arg(parser)
     _update_arg(parser)
     _report_arg(parser)
@@ -261,7 +247,14 @@ def _path(argstr):
 # Config ---------------------------------------------------------------------
 
 
-def read_config(extra_config_paths=None, require=False):
+CFG_TYPES = {
+    DEFAULT_CONFIG_SECTION: {
+        'db_path': _path,
+    },
+}
+
+
+def read_config():
     '''Read configuration from the ``DEFAULT_CONFIG_PATH and
     optionally supplied ``extra_config_paths``.
 
@@ -277,30 +270,47 @@ def read_config(extra_config_paths=None, require=False):
         ``ValueError`` is raised if ``require`` is *True*
         and if no config-file was found.
     '''
-    extra = [p for p in extra_config_paths or [] if p]
-    paths = [SYSTEM_CONFIG_PATH, USER_CONFIG_PATH,] + extra
+    root = argparse.Namespace()
     cfg = configparser.ConfigParser()
 
-    # set defaults
-    for section, settings in DEFAULT_CONFIG.items():
-        try:
-            cfg.add_section(section)
-        except configparser.DuplicateSectionError:
-            pass
-        for key, value in settings.items():
-            cfg.set(section, key, value)
+    # default config from package
+    cfg.readfp(io.TextIOWrapper(
+        resource_stream('steamwatch', 'default.conf'))
+    )
 
-    read_from = cfg.read(paths)
-    if not read_from and require:
-        raise ConfigurationError(('No configuration file found.'
-            ' Searchpath: {!r}.').format(':'.join(paths)))
+    # system + user config from files
+    read_from = cfg.read([SYSTEM_CONFIG_PATH, USER_CONFIG_PATH,])
 
-    log.info('Read configuration from: {}.'.format(':'.join(read_from)))
-    return cfg
+    def ns(name):
+        rv = None
+        if name == DEFAULT_CONFIG_SECTION:
+            rv = root
+        else:
+            try:
+                rv = getattr(root, name)
+            except AttributeError:
+                rv = argparse.Namespace()
+                setattr(root, name, rv)
+        return rv
+
+    def identity(x):
+        return x
+
+    # set config values on namespace(s)
+    for section in cfg.sections():
+        for option in cfg.options(section):
+            value = cfg.get(section, option)
+            try:
+                conv = CFG_TYPES.get(section, {}).get(option, identity)
+                setattr(ns(section), option, conv(value))
+            except (TypeError, ValueError):
+                log.error(('Failed to convert config value {v!r}'
+                    ' for {s!r}, {o!r}').format(s=section, o=option, v=value))
+
+    return root
 
 
-def configure_logging(quiet=False, verbose=False,
-    logfile=None, log_level=DEFAULT_LOG_LEVEL):
+def configure_logging(options):
     '''Configure log-level and logging handlers.
 
     :param bool quiet:
@@ -324,21 +334,21 @@ def configure_logging(quiet=False, verbose=False,
     rootlog = logging.getLogger()
     rootlog.setLevel(logging.DEBUG)
 
-    if not quiet:
+    if not options.quiet:
         console_hdl = logging.StreamHandler()
-        console_level = logging.DEBUG if verbose else logging.WARNING
+        console_level = logging.DEBUG if options.verbose else logging.WARNING
         console_hdl.setLevel(console_level)
         console_hdl.setFormatter(logging.Formatter(CONSOLE_FMT))
         rootlog.addHandler(console_hdl)
 
-    if logfile:
+    if options.logfile:
         if logfile == 'syslog':
             logfile_hdl = handlers.SysLogHandler(address='/dev/log')
             logfile_hdl.setFormatter(logging.Formatter(SYSLOG_FMT))
         else:
-            logfile_hdl = handlers.RotatingFileHandler(logfile)
+            logfile_hdl = handlers.RotatingFileHandler(options.logfile)
             logfile_hdl.setFormatter(logging.Formatter(LOGFILE_FMT))
-        logfile_hdl.setLevel(log_level)
+        logfile_hdl.setLevel(options.log_level)
         rootlog.addHandler(logfile_hdl)
 
 
