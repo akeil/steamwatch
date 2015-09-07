@@ -119,23 +119,9 @@ class Application(object):
 
     def ls(self):
         '''List games'''
-        #TODO ORDER BY
-        return Game.select(self.db).many()
-
-    def disable(self, appid):
-        '''Stop watching the given ``appid``, but do not delete it.'''
-        self._set_enabled(appid, False)
-
-    def enable(self, appid):
-        '''Resume watching a disabled ``appid``.'''
-        self._set_enabled(appid, True)
-
-    def _set_enabled(self, appid, enabled):
-        enabled = bool(enabled)
-        game = self.get(appid)
-        if game.enabled != enabled:
-            game.enabled = enabled
-            game.save(self.db)
+        select = Game.select(self.db)
+        select.order_by('enabled', desc=True).order_by('name')
+        return select.many()
 
     def fetch_all(self):
         '''Update measures for all enabled Games.'''
