@@ -8,9 +8,6 @@ from datetime import datetime
 from pkg_resources import iter_entry_points
 
 from steamwatch.exceptions import GameNotFoundError
-from steamwatch.models import Game, Measure
-from steamwatch.models import Database
-from steamwatch.models import NotFoundError
 from steamwatch.model import init as init_db
 from steamwatch.model import App
 from steamwatch.model import Package
@@ -153,6 +150,7 @@ class Application(object):
                 if pid in existing:
                     pkg = existing[pid]
                 else:
+                    #TODO check if we already have it
                     pkg = Package.from_apidata(pid, pkgdata)
                     pkg.link(app)
                 ss = pkg.record_snapshot(pkgdata)
