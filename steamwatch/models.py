@@ -256,7 +256,6 @@ class _Where:
         return [p.predicate for p in self._predicates if hasattr(p, 'predicate')]
 
     def __getattr__(self, name):
-        print(name)
         if name in ('or_is', 'or_not', 'and_is', 'and_not'):
             context = self
         else:
@@ -520,6 +519,18 @@ class Measure(_Model):
         self.currency = kwargs.get('currency')
         self.metacritic = kwargs.get('metacritic')
         self.datetaken = kwargs.get('datetaken')
+
+    def is_different(self, other):
+        if self.gameid != other.gameid:
+            raise ValueError('cannot compare with different gameids')
+
+        return (
+            self.price != other.price
+            or self.baseprice != other.baseprice
+            or self.discount != other.discount
+            or self.currency != other.currency
+            or self.metacritic != other.metacritic
+        )
 
     def __repr__(self):
         return '<Measure gameid={s.gameid!r}>'.format(s=self)

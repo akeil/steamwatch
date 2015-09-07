@@ -95,7 +95,6 @@ class Application(object):
         results = storeapi.appdetails(appid)
         data = results[appid]['data']
         self._store_measure(game, data)
-        self._changes(game)
 
     def _store_measure(self, game, data):
         po = data.get('price_overview', {})
@@ -104,7 +103,7 @@ class Application(object):
         baseprice = po.get('initial')
         discount = po.get('discount_percent')
 
-        m = Measure(
+        current = Measure(
             gameid=game.id,
             currency=currency,
             price=price / 100.0 if price else None,
@@ -113,19 +112,19 @@ class Application(object):
             metacritic=data.get('metacritic', {}).get('score'),
             datetaken=datetime.now()
         )
-        m.save(self.db)
 
-    def _changes(self, game):
-        measures = Measure.select(self.db).where('gameid').equals(game.id).many()
-        #TODO order_by and limit
-        measures.sort(key=lambda x: x.datetaken)
+        select = Measure.select(self.db).where('gameid').equals(game.id)
+        select.order_by('datetaken', desc=True).limit(1)
         try:
-            current = measures[0]
-            previous = measures[1]
-        except IndexError:
-            # we have none or only one measure - no changes possible
-            return
+            previous = select.one()
+        except NotFoundError:
+            previous = None
 
+        if not previous or previous.is_different(current):
+            current.save(self.db)
+            self._changes(game, current, previous)
+
+    def _changes(self, game, current, previous):
         if current.price != previous.price:
             self._signal(SIGNAL_PRICE,
                 gameid=game.id,
