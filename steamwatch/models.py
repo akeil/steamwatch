@@ -295,6 +295,25 @@ class _Token:
 
 
 class Select(Statement):
+    '''SELECT statement builder.
+
+
+    Use like this::
+
+        select = Select(db, model).where('field').equals('predicate')
+        select.one()
+
+    or::
+
+        select = Select(db, model)
+        select.where('foo').equals('x').and_is('bar').equals('y')
+        select.many()
+
+    Supports ORDER BY and LIMIT::
+
+        Select(db, model).order_by('foo').limit(1)
+
+    '''
 
     def __init__(self, db, model):
         super(Select, self).__init__(db, model.__table__)
@@ -304,13 +323,19 @@ class Select(Statement):
         self._limit = None
 
     def where(self, field):
+        '''Append a WHERE clause'''
         return self._where(field)
 
     def order_by(self, field, desc=False):
+        '''Append an ORDER_BY clause.
+
+        Can be called multiple times to use multiple order by criteria.
+        '''
         self._order.append((field, 'DESC' if desc else 'ASC'))
         return self
 
     def limit(self, limit):
+        '''Add a LIMIT clause'''
         self._limit = limit
         return self
 
@@ -371,6 +396,7 @@ class Select(Statement):
 
 
 class Update(Statement):
+    '''UPDATE statement for a single instance.'''
 
     def __init__(self, db, instance):
         super(Update, self).__init__(db, instance.__table__)
@@ -396,12 +422,14 @@ class Update(Statement):
         return sql
 
     def execute(self):
+        '''Execute the UPDATE'''
         cursor = self._exec()
         if cursor.rowcount == 0:
             raise NotFoundError
 
 
 class Insert(Statement):
+    '''INSERT statement for a single instance.'''
 
     def __init__(self, db, instance):
         super(Insert, self).__init__(db, instance.__table__)
@@ -417,14 +445,16 @@ class Insert(Statement):
         return [c.get(self._instance) for c in self._instance.__columns__]
 
     def execute(self):
+        '''Execute the insert.'''
         cursor = self._exec()
         self._instance.id = cursor.lastrowid
 
 
 class Delete:
+    '''DELETE statement for a single instance.'''
 
     def __init__(self, db, instance):
-        super(Insert, self).__init__(db, instance.__table__)
+        super(Delete, self).__init__(db, instance.__table__)
         self._instance = instance
 
     def _params(self):
@@ -432,6 +462,11 @@ class Delete:
 
     def _build(self):
         return 'DELETE FROM ' + self._table + ' WHERE id=?'
+
+    def execute(self):
+        cursor = self._exec()
+        if cursor.rowcount == 0:
+            raise NotFoundError
 
 
 class _Model:
