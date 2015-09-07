@@ -519,9 +519,7 @@ class Game(_Model):
         self.enabled = kwargs.get('enabled', True)
         self.name = kwargs.get('name')
         self.threshold = kwargs.get('threshold')
-        self.categories = []
         self.dlc = []
-        self.genres = []
         self.packages = []  # ?
         self.pf_linux = False
         self.pf_windows = False
@@ -551,9 +549,6 @@ class Game(_Model):
             metacritic=data.get('metacritic', {}).get('score'),
             datetaken=datetime.now()
         )
-
-    def __repr__(self):
-        return '<Game appid={s.appid!r}>'.format(s=self)
 
 
 class Measure(_Model):

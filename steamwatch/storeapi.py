@@ -26,6 +26,7 @@ import logging
 
 from steamwatch.exceptions import GameNotFoundError
 
+
 BASEURL = 'http://store.steampowered.com/api'
 log = logging.getLogger(__name__)
 
