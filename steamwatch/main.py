@@ -23,7 +23,6 @@ except ImportError:
 
 import steamwatch
 from steamwatch import application
-from steamwatch.models import NotFoundError
 from steamwatch.exceptions import ConfigurationError
 
 
@@ -288,12 +287,12 @@ def fetch(subs, common):
     def do_fetch(app, options):
         if options.games:
             for game in options.games:
-                try:
-                    g = app.get(game)
-                    app.fetch(g)
-                except NotFoundError:
+                g = app.get(game)
+                if not g:
                     log.warning(
                         'Game with id {g!r} is not watched'.format(g=game))
+                else:
+                    app.fetch(g)
         else:
             app.fetch_all()
 
@@ -322,12 +321,12 @@ def report(subs, common):
         if options.games:
             reports = {}
             for game in options.games:
-                try:
-                    g = app.get(game)
-                    reports = [(g, app.report(g, limit=options.limit)),]
-                except NotFoundError:
+                g = app.get(game)
+                if not g:
                     log.warning(
                         'Game with id {g!r} is not watched'.format(g=game))
+                else:
+                    reports = [(g, app.report(g, limit=options.limit)),]
         else:
             reports = app.report_all(limit=options.limit)
 
