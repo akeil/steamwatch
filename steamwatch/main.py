@@ -83,6 +83,8 @@ def main(argv=None):
 
     log.info('Starting {!r}.'.format(PROG_NAME))
     log.debug('Command line: {!r}.'.format(' '.join(argv)))
+    _log_options(options)
+
     try:
         run(options)
         rv = EXIT_OK
@@ -100,6 +102,15 @@ def main(argv=None):
     return rv
 
 
+def _log_options(options):
+    for k, v in vars(options).items():
+        if isinstance(v, argparse.Namespace):
+            log.debug('Section {s!r}'.format(s=k))
+            _log_options(v)
+        else:
+            log.debug('Option {k}: {v!r}'.format(k=k, v=v))
+
+
 def run(options):
     '''Run steamwatch with the given command line args
     and config.
@@ -108,7 +119,7 @@ def run(options):
         A ``Namespace`` instance with arguments from the command line
         and from the config file(s).
     '''
-    app = application.Application(options.db_path)
+    app = application.Application(options)
     return options.func(app, options)
 
 
@@ -301,18 +312,24 @@ def report(subs, common):
         help=('List of game ids to report. Reports all games if omitted')
     )
 
+    report.add_argument(
+        '-n', '--limit',
+        type=int,
+        help='Limit the number of entries per game'
+    )
+
     def do_report(app, options):
         if options.games:
             reports = {}
             for game in options.games:
                 try:
                     g = app.get(game)
-                    reports[g] = app.report(g)
+                    reports[g] = app.report(g, limit=options.limit)
                 except NotFoundError:
                     log.warning(
                         'Game with id {g!r} is not watched'.format(g=game))
         else:
-            reports = app.report_all()
+            reports = app.report_all(limit=options.limit)
 
         _print_reports(reports)
 
@@ -353,6 +370,7 @@ def _path(argstr):
 CFG_TYPES = {
     DEFAULT_CONFIG_SECTION: {
         'db_path': _path,
+        'report_limit': int,
     },
 }
 

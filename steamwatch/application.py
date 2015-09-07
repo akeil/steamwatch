@@ -26,8 +26,9 @@ SIGNAL_THRESHOLD = 'threshold'
 
 class Application(object):
 
-    def __init__(self, db_path):
-        self.db = Database(db_path)
+    def __init__(self, options):
+        self.options = options
+        self.db = Database(options.db_path)
 
     def watch(self, appid, threshold=None):
         '''Start watching for changes on the steam item with the given
@@ -186,20 +187,20 @@ class Application(object):
                     current=current.price
                 )
 
-    def report(self, game):
+    def report(self, game, limit=None):
         '''List Measures for the given Game.'''
-        measures = Measure.select(self.db).where('gameid').equals(game.id).many()
-        #TODO order_by
-        measures.sort(key=lambda x: x.datetaken)
-        return measures
+        select = Measure.select(self.db).where('gameid').equals(game.id)
+        select.order_by('datetaken', desc=True)
+        select.limit(limit or self.options.report_limit)
+        return select.many()
 
-    def report_all(self):
+    def report_all(self, limit=None):
         '''List Measures for all enabled Games.'''
         #TODO .equals(True)
         games = Game.select(self.db).where('enabled').equals('1').many()
         reports = {}
         for game in games:
-            reports[game] = self.report(game)
+            reports[game] = self.report(game, limit=limit)
 
         return reports
 

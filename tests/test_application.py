@@ -7,6 +7,7 @@ test_application
 
 Tests for `application` module.
 """
+import argparse
 import pytest
 
 from steamwatch import application
@@ -16,7 +17,9 @@ from steamwatch.models import NotFoundError
 
 @pytest.fixture(scope='session')
 def app():
-    app = application.Application(':memory:')
+    options = argparse.Namespace()
+    options.db_path = ':memory:'
+    app = application.Application(options)
 
     # sample data
     cur = app.db.conn.cursor()
