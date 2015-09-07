@@ -450,7 +450,7 @@ class Insert(Statement):
         self._instance.id = cursor.lastrowid
 
 
-class Delete:
+class Delete(Statement):
     '''DELETE statement for a single instance.'''
 
     def __init__(self, db, instance):
@@ -526,6 +526,12 @@ class Game(_Model):
         self.pf_linux = False
         self.pf_windows = False
         self.pf_mac = False
+
+    def enable(self):
+        self.enabled = True
+
+    def disable(self):
+        self.enabled = False
 
     def __repr__(self):
         return '<Game appid={s.appid!r}>'.format(s=self)

@@ -10,6 +10,7 @@ from pkg_resources import iter_entry_points
 from steamwatch.exceptions import GameNotFoundError
 from steamwatch.models import Game, Measure
 from steamwatch.models import Database
+from steamwatch.models import NotFoundError
 from steamwatch import storeapi
 
 
@@ -18,6 +19,7 @@ log = logging.getLogger(__name__)
 
 EP_SIGNALS = 'steamwatch.signals'
 SIGNAL_ADDED = 'added'
+SIGNAL_REMOVED = 'removed'
 SIGNAL_PRICE = 'price'
 SIGNAL_THRESHOLD = 'threshold'
 
@@ -27,24 +29,81 @@ class Application(object):
     def __init__(self, db_path):
         self.db = Database(db_path)
 
-    def add(self, appid, threshold=None):
-        '''Add a Game to be watched.'''
-        results = storeapi.appdetails(appid)
-        try:
-            data = results[appid]['data']
-        except KeyError:
-            raise GameNotFoundError('No game with appid {!r}.'.format(appid))
-        game = Game(
-            appid=appid,
-            name = data.get('name'),
-            threshold=threshold,
-        )
-        # TODO: what if the appid exists = sqlite3.IntegrityError?
-        game.save(self.db)
-        self._signal(SIGNAL_ADDED, gameid=game.id, appid=game.appid)
+    def watch(self, appid, threshold=None):
+        '''Start watching for changes on the steam item with the given
+        ``appid``.
 
-        self._store_measure(game, data)
+        If this ``appid`` is new, it is added to the database.
+
+        If the item is already in the database but is *disabled*, it is
+        *enabled*.
+
+        If the item is already being watched, nothing happens.
+        '''
+        should_update = False
+        try:
+            known = self.get(appid)
+        except NotFoundError:
+            known = None
+
+        if known and known.enabled:
+            log.warning(('Attempted to add {a!r} to the watchlist'
+                ' but it is already being watched.').format(a=appid))
+            game = known
+        elif known:  # is disabled
+            game = known
+            game.enable()
+            game.save(self.db)
+            should_update = True
+
+        else:  # not previously known
+            results = storeapi.appdetails(appid)
+            try:
+                data = results[appid]['data']
+            except KeyError:
+                raise GameNotFoundError('No game with appid {!r}.'.format(appid))
+            game = Game(
+                appid=appid,
+                name = data.get('name'),
+                threshold=threshold,
+            )
+            game.save(self.db)
+            should_update = True
+
+        if should_update:
+            log.info('{g.name!r} was added to the watchlist.'.format(g=game))
+            self._signal(SIGNAL_ADDED, gameid=game.id, appid=game.appid)
+            self.fetch(game)
+
         return game
+
+    def unwatch(self, appid, delete=False):
+        '''Stop watching the game with the given appid.
+
+        If the game is currently bein watched, it will be *disabled*,
+        unless the optional parameter ``delete`` is set to *True*
+        (which will completely remove the game and all measures.)
+
+        If the game is currently not being watched, nothing happens.'''
+        try:
+            game = self.get(appid)
+        except NotFoundError:
+            log.warning(('Attempted to remove {a!r} from the watchlist'
+                ' but it was not watched.').format(a=appid))
+            return
+
+        if delete:
+            m = Measure.select(self.db).where('gameid').equals(game.id).many()
+            for measure in m:
+                measure.delete(self.db)
+            game.delete(self.db)
+            log.info('Deleted {g.name!r}'.format(g=game))
+        else:
+            game.disable()
+            game.save(self.db)
+            log.info('Disabled {g.name!r}'.format(g=game))
+
+        self._signal(SIGNAL_REMOVED, gameid=game.id, appid=game.appid)
 
     def get(self, appid):
         '''Get the :class:`Game` that is associated with the given ``appid``.
@@ -60,6 +119,7 @@ class Application(object):
 
     def ls(self):
         '''List games'''
+        #TODO ORDER BY
         return Game.select(self.db).many()
 
     def disable(self, appid):
@@ -122,7 +182,8 @@ class Application(object):
 
         if not previous or previous.is_different(current):
             current.save(self.db)
-            self._changes(game, current, previous)
+            if previous:
+                self._changes(game, current, previous)
 
     def _changes(self, game, current, previous):
         if current.price != previous.price:

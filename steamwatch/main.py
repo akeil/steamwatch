@@ -183,6 +183,7 @@ def setup_argparser():
 
     subs = parser.add_subparsers()
     watch(subs, common)
+    unwatch(subs, common)
     ls(subs, common)
     fetch(subs, common)
     report(subs, common)
@@ -213,9 +214,33 @@ def watch(subs, common):
     )
 
     def do_watch(app, options):
-        app.add(options.appid, threshold=options.threshold)
+        app.watch(options.appid, threshold=options.threshold)
 
     watch.set_defaults(func=do_watch)
+
+
+def unwatch(subs, common):
+    unwatch = subs.add_parser(
+        'unwatch',
+        parents=[common, ],
+        help='Remove a game (appid) from the watchlist'
+    )
+
+    unwatch.add_argument(
+        'appid',
+        help=('The id of the game to remove')
+    )
+
+    unwatch.add_argument(
+        '-d', '--delete',
+        action='store_true',
+        help=('Fully delete instead of disable the game.')
+    )
+
+    def do_unwatch(app, options):
+        app.unwatch(options.appid, delete=options.delete)
+
+    unwatch.set_defaults(func=do_unwatch)
 
 
 def ls(subs, common):

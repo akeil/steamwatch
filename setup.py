@@ -69,6 +69,7 @@ setup(
         ],
         'steamwatch.signals': [
             'added = steamwatch.application:log_signal',
+            'removed = steamwatch.application:log_signal',
             'price = steamwatch.application:log_signal',
             'threshold = steamwatch.application:log_signal',
         ]
