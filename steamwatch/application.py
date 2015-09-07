@@ -72,7 +72,7 @@ class Application(object):
 
         if should_update:
             log.info('{g.name!r} was added to the watchlist.'.format(g=game))
-            self._signal(SIGNAL_ADDED, gameid=game.id, appid=game.appid)
+            self._signal(SIGNAL_ADDED, game=game)
             self.fetch(game)
 
         return game
@@ -103,7 +103,7 @@ class Application(object):
             game.save(self.db)
             log.info('Disabled {g.name!r}'.format(g=game))
 
-        self._signal(SIGNAL_REMOVED, gameid=game.id, appid=game.appid)
+        self._signal(SIGNAL_REMOVED, game=game)
 
     def get(self, appid):
         '''Get the :class:`Game` that is associated with the given ``appid``.
