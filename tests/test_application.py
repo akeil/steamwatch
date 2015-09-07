@@ -24,11 +24,11 @@ def app():
     # sample data
     cur = app.db.conn.cursor()
     cur.executemany(
-        'insert into games (appid, enabled, name) values (?, ?, ?)',
+        'insert into apps (appid, kind, enabled, name) values (?, ?, ?, ?)',
         (
-            ('111', 1, 'Game One'),
-            ('222', 1, 'Game Two'),
-            ('333', 0, 'Game Three'),
+            ('111', 'game', 1, 'Game One'),
+            ('222', 'game', 1, 'Game Two'),
+            ('333', 'game', 0, 'Game Three'),
         )
     )
 
@@ -40,6 +40,8 @@ def mockapi(monkeypatch):
 
     def mock_appdetails(appid):
         return {
+            'type': 'game',
+            'steam_appid': appid,
             'metacritic': {
                 'score': 70
             },

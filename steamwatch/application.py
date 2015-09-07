@@ -59,11 +59,7 @@ class Application(object):
 
         else:  # not previously known
             data = storeapi.appdetails(appid)
-            game = Game(
-                appid=appid,
-                name = data.get('name'),
-                threshold=threshold,
-            )
+            game = Game.from_appdetails(data, threshold=threshold)
             game.save(self.db)
             should_update = True
 

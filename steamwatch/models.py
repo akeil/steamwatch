@@ -504,10 +504,11 @@ class _Model:
 
 class Game(_Model):
 
-    __table__ = 'games'
+    __table__ = 'apps'
     __columns__ = (
         Column('id', datatype='integer', primary=True),
         Column('appid', null=False, unique=True),
+        Column('kind', null=False),
         Column('enabled', datatype='boolean', null=False),
         Column('name'),
         Column('threshold', datatype='real')
@@ -516,6 +517,7 @@ class Game(_Model):
     def __init__(self, **kwargs):
         self.id = None
         self.appid = kwargs.get('appid')
+        self.kind = kwargs.get('kind')
         self.enabled = kwargs.get('enabled', True)
         self.name = kwargs.get('name')
         self.threshold = kwargs.get('threshold')
@@ -549,6 +551,55 @@ class Game(_Model):
             metacritic=data.get('metacritic', {}).get('score'),
             datetaken=datetime.now()
         )
+
+    @classmethod
+    def from_appdetails(cls, d, **extra):
+        return cls(
+            kind=d['type'],  # game or dlc
+            appid=d['steam_appid'],
+            name=d.get('name'),
+            #dlc = d.get('dlc', [])
+            #packages = d.get('packages')
+            **extra
+        )
+
+    def __repr__(self):
+        return '<Game appid={s.appid!r}>'.format(s=self)
+
+
+class Package(_Model):
+
+    __table__ = 'packages'
+    __columns__ = (
+        Column('id', datatype='integer', primary=True),
+        Column('packageid', null=False, unique=True),
+        Column('name'),
+    )
+
+    def __init__(self, **kwargs):
+        self.id = None
+
+    @classmethod
+    def from_appdetails(cls, d, **extra):
+        cls(
+            packageid=d['packageid'],
+            name=d.get('name')
+        )
+
+
+class AppToPackage(_Model):
+
+    __table__ = 'app_package'
+    __columns__ = (
+        Column('id', datatype='integer', primary=True),
+        Column('app', null=False),
+        Column('package', null=False),
+    )
+
+    def __init__(self, app, package):
+        self.id = None
+        self.app = app
+        self.package = package
 
 
 class Measure(_Model):
