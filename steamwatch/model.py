@@ -75,6 +75,12 @@ class App(BaseModel):
     def link(self, package):
         AppPackage.create(app=self, package=package)
 
+    def enable(self):
+        self.enabled = True
+
+    def disable(self):
+        self.enabled = False
+
     @property
     def packages(self):
         return [ap.package for ap in self.app_packages]

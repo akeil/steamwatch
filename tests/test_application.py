@@ -12,19 +12,18 @@ import pytest
 
 from steamwatch import application
 from steamwatch import storeapi
-from steamwatch.models import NotFoundError
+from steamwatch import model
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture
 def app():
     options = argparse.Namespace()
     options.db_path = ':memory:'
     app = application.Application(options)
-
-    # sample data
-    cur = app.db.conn.cursor()
+    # db is initialized, insert sample data
+    cur = model.db.get_cursor()
     cur.executemany(
-        'insert into apps (appid, kind, enabled, name) values (?, ?, ?, ?)',
+        'insert into app (steamid, kind, enabled, name) values (?, ?, ?, ?)',
         (
             ('111', 'game', 1, 'Game One'),
             ('222', 'game', 1, 'Game Two'),
@@ -64,21 +63,20 @@ def test_watch(app, mockapi):
     assert game.id > 0
     assert game.enabled
     assert game.name == 'Name of the Game'
-    assert game.appid == '123'
+    assert game.steamid == '123'
 
     # watching it again should be possible (i.e. no errors)
     game = app.watch('123')
 
 
-def test_unwatch(app):
+def test_unwatch(app, mockapi):
     app.watch('123')
     app.unwatch('123', delete=False)
     game = app.get('123')
     assert not game.enabled
 
     app.unwatch('123', delete=True)
-    with pytest.raises(NotFoundError):
-        app.get('123')
+    assert app.get('123') is None
 
 
 def test_unwatch_non_existing(app):
@@ -97,15 +95,6 @@ def test_watch_enable(app, mockapi):
     app.watch('123')
     game = app.get('123')
     assert game.enabled  # precondition
-
-
-def test_update_all(app, mockapi):
-    pass
-
-
-def test_report():
-    pass
-
 
 
 if __name__ == '__main__':

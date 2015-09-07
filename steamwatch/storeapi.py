@@ -55,14 +55,21 @@ def appdetails(appid):
         return result[appid]['data']
 
 
-def packagedetails(*packageids):
-    params = {
-        'packageids': ','.join(str(packageid) for packageid in packageids),
-    }
-    query = urlencode(params)
+def packagedetails(packageid):
+    query = urlencode({'packageids': packageid})
     url = '{base}/packagedetails?{query}'.format(base=BASEURL, query=query)
     response = _get(url)
-    return _readjson(reponse)
+    result = _readjson(reponse)
+
+    try:
+        success = result[packageid]['success']
+    except KeyError:
+        success = False
+
+    if not success:
+        raise GameNotFoundError
+    else:
+        return result[packageid]['data']
 
 
 def _get(url):

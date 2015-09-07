@@ -11,6 +11,10 @@ from steamwatch.exceptions import GameNotFoundError
 from steamwatch.models import Game, Measure
 from steamwatch.models import Database
 from steamwatch.models import NotFoundError
+from steamwatch.model import init as init_db
+from steamwatch.model import App
+from steamwatch.model import Package
+from steamwatch.model import Snapshot
 from steamwatch import storeapi
 
 
@@ -20,15 +24,28 @@ log = logging.getLogger(__name__)
 EP_SIGNALS = 'steamwatch.signals'
 SIGNAL_ADDED = 'added'
 SIGNAL_REMOVED = 'removed'
-SIGNAL_PRICE = 'price'
 SIGNAL_THRESHOLD = 'threshold'
+
+SIGNAL_CURRENCY = 'currency_changed'
+SIGNAL_PRICE = 'price_changed'
+SIGNAL_RELEASE_DATE = 'release_date_changed'
+SIGNAL_COMING_SOON = 'coming_soon_changed'
+SIGNAL_SUPPORTS_LINUX = 'supports_linux_changed'
+
+FIELD_SIGNALS = {
+    'currency': SIGNAL_CURRENCY,
+    'price': SIGNAL_PRICE,
+    'release_date': SIGNAL_RELEASE_DATE,
+    'coming_soon': SIGNAL_COMING_SOON,
+    'supports_linux': SIGNAL_SUPPORTS_LINUX,
+}
 
 
 class Application(object):
 
     def __init__(self, options):
         self.options = options
-        self.db = Database(options.db_path)
+        init_db(self.options.db_path)
 
     def watch(self, appid, threshold=None):
         '''Start watching for changes on the steam item with the given
@@ -42,33 +59,30 @@ class Application(object):
         If the item is already being watched, nothing happens.
         '''
         should_update = False
-        try:
-            known = self.get(appid)
-        except NotFoundError:
-            known = None
+        known = self.get(appid)
 
         if known and known.enabled:
             log.warning(('Attempted to add {a!r} to the watchlist'
                 ' but it is already being watched.').format(a=appid))
-            game = known
+            app = known
         elif known:  # is disabled
-            game = known
-            game.enable()
-            game.save(self.db)
+            app = known
+            app.enable()
+            app.save()
             should_update = True
 
         else:  # not previously known
             data = storeapi.appdetails(appid)
-            game = Game.from_appdetails(data, threshold=threshold)
-            game.save(self.db)
+            app = App.from_apidata(appid, data, threshold=threshold)
+            app.save()
             should_update = True
 
         if should_update:
-            log.info('{g.name!r} was added to the watchlist.'.format(g=game))
-            self._signal(SIGNAL_ADDED, game=game)
-            self.fetch(game)
+            log.info('{a.name!r} was added to the watchlist.'.format(a=app))
+            self._signal(SIGNAL_ADDED, app=app)
+            self.fetch(app)
 
-        return game
+        return app
 
     def unwatch(self, appid, delete=False):
         '''Stop watching the game with the given appid.
@@ -78,25 +92,26 @@ class Application(object):
         (which will completely remove the game and all measures.)
 
         If the game is currently not being watched, nothing happens.'''
-        try:
-            game = self.get(appid)
-        except NotFoundError:
+        app = self.get(appid)
+        if app is None:
             log.warning(('Attempted to remove {a!r} from the watchlist'
                 ' but it was not watched.').format(a=appid))
             return
 
-        if delete:
-            m = Measure.select(self.db).where('gameid').equals(game.id).many()
-            for measure in m:
-                measure.delete(self.db)
-            game.delete(self.db)
-            log.info('Deleted {g.name!r}'.format(g=game))
+        if delete and False:  #TODO '...and False' is temp
+            # TODO:
+            # find all packages that are associated to this app *only*
+            # delete Snapshots for these packages
+            # delete packages themselves
+            # delete the app
+            app.delete_instance()
+            log.info('Deleted {a.name!r}'.format(a=app))
         else:
-            game.disable()
-            game.save(self.db)
-            log.info('Disabled {g.name!r}'.format(g=game))
+            app.disable()
+            app.save()
+            log.info('Disabled {a.name!r}'.format(a=app))
 
-        self._signal(SIGNAL_REMOVED, game=game)
+        self._signal(SIGNAL_REMOVED, app=app)
 
     def get(self, appid):
         '''Get the :class:`Game` that is associated with the given ``appid``.
@@ -108,78 +123,94 @@ class Application(object):
         :raises:
             `NotFoundError` if we are not watching the given ``appid``.
         '''
-        return Game.select(self.db).where('appid').equals(appid).one()
+        return App.select().where(App.steamid==appid).first()
 
     def ls(self):
-        '''List games'''
-        select = Game.select(self.db)
-        select.order_by('enabled', desc=True).order_by('name')
-        return select.many()
+        '''List apps'''
+        select = App.select()  # all
+        return select.order_by(App.enabled.desc()).order_by(App.name)
 
     def fetch_all(self):
         '''Update measures for all enabled Games.'''
-        #TODO should be possible to call .equals(True)
-        games = Game.select(self.db).where('enabled').equals('1').many()
-        for game in games:
-            self.fetch(game)
+        apps = App.select().where(App.enabled == True)
+        for app in apps:
+            self.fetch(app)
 
-    def fetch(self, game):
+    def fetch(self, app):
         '''Update measures for the given Game.'''
-        if not game.enabled:
-            log.warning('{g!r} is disabled and will not be updated.'.format(
-                g=Game))
+        if not app.enabled:
+            log.warning('{a!r} is disabled and will not be updated.'.format(
+                a=app))
             return
 
-        appid = game.appid
-        data = storeapi.appdetails(appid)
-        self._store_measure(game.measure(data))
+        appid = app.steamid
+        appdata = storeapi.appdetails(appid)
+        found = appdata.get('packages', [])
+        existing = {p.steamid: p for p in app.packages}
+        for pid in found:
+            try:
+                pkgdata = storeapi.packagedetails(pid)
+                if pid in existing:
+                    pkg = existing[pid]
+                else:
+                    pkg = Package.from_apidata(pkgdata)
+                ss = pkg.record_snapshot(pkgdata)
+                if ss:
+                    self._signal_changes(ss)
+            except GameNotFoundError:
+                continue
 
-    def _store_measure(self, measure):
-        # check if this measure differs from the previous one
-        select = Measure.select(self.db)
-        select.where('gameid').equals(measure.gameid)
-        select.order_by('datetaken', desc=True).limit(1)
-        try:
-            previous = select.one()
-        except NotFoundError:
-            previous = None
-
-        if not previous or previous.is_different(measure):
-            measure.save(self.db)
-            if previous:
-                self._signal_changes(game, measure, previous)
-
-    def _signal_changes(self, game, current, previous):
-        if current.price != previous.price:
-            self._signal(SIGNAL_PRICE,
-                gameid=game.id,
-                previous=previous.price,
-                current=current.price
+    def _signal_changes(self, snapshot):
+        for field, current, previous in snapshot.diff():
+            self._signal(
+                FIELD_SIGNALS[field],
+                current=current,
+                previous=previous,
+                package=ss.package
             )
 
-            if game.threshold and current_measure.price <= game.threshold:
-                self._signal(SIGNAL_THRESHOLD,
-                    gameid=game.id,
-                    threshold=game.threshold,
-                    current=current.price
-                )
-
     def report(self, game, limit=None):
-        '''List Measures for the given Game.'''
-        select = Measure.select(self.db).where('gameid').equals(game.id)
-        select.order_by('datetaken', desc=True)
-        select.limit(limit or self.options.report_limit)
-        return select.many()
+        '''List Snapshots for the given Game.
+
+        Returns a list of packages with their snapshots::
+
+            [
+                (<package-0>, [<snapshot-0>, <snapshot-1>, ...]),
+                (<package-1>, [<snapshot-0>, <snapshot-1>, ...]),
+            ]
+        '''
+        results = []
+        for package in app.packages:
+            select = package.snapshots.order_by(Snapshot.timestamp.desc())
+            if limit:
+                select.limit(limit)
+            results.append((package, [s for s in select]))
+
+        return results
 
     def report_all(self, limit=None):
-        '''List Measures for all enabled Games.'''
-        #TODO .equals(True)
-        games = Game.select(self.db).where('enabled').equals('1').many()
-        reports = {}
-        for game in games:
-            reports[game] = self.report(game, limit=limit)
+        '''List Measures for all enabled Games.
 
-        return reports
+        Returns a list of games with packages and snapshots::
+
+            [
+                (<game-0>, [
+                    (<package-0>, [<snapshot-0>, <snapshot-1>, ...]),
+                    (<package-1>, [<snapshot-0>, <snapshot-1>, ...]),
+                ]),
+                (<game-1>, [
+                    (<package-0>, [<snapshot-0>, <snapshot-1>, ...]),
+                    (<package-1>, [<snapshot-0>, <snapshot-1>, ...]),
+                ]),
+                ...
+            ]
+        '''
+        apps = App.select().where(App.enabled == True)
+        results = []
+        for app in apps:
+            results.append((app, self.report(app, limit=limit)))
+
+        return results
 
     def _signal(self, name, **data):
         log.debug('Emit {s!r}.'.format(s=name))

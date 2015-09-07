@@ -70,8 +70,12 @@ setup(
         'steamwatch.signals': [
             'added = steamwatch.application:log_signal',
             'removed = steamwatch.application:log_signal',
-            'price = steamwatch.application:log_signal',
             'threshold = steamwatch.application:log_signal',
+            'currency_changed = steamwatch.application:log_signal',
+            'price_changed = steamwatch.application:log_signal',
+            'release_date_changed = steamwatch.application:log_signal',
+            'coming_soon_changed = steamwatch.application:log_signal',
+            'supports_linux_changed = steamwatch.application:log_signal',
         ]
     }
 )
