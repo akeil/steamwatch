@@ -324,23 +324,27 @@ def report(subs, common):
             for game in options.games:
                 try:
                     g = app.get(game)
-                    reports[g] = app.report(g, limit=options.limit)
+                    reports = [(g, app.report(g, limit=options.limit)),]
                 except NotFoundError:
                     log.warning(
                         'Game with id {g!r} is not watched'.format(g=game))
         else:
             reports = app.report_all(limit=options.limit)
 
-        _print_reports(reports)
+        _render_reports(reports)
 
     report.set_defaults(func=do_report)
 
 
-def _print_reports(reports):
-    for game, measures in reports.items():
-        print('{} [{}]'.format(game.name, game.appid))
-        for m in measures:
-            print('  {} {}'.format(m.datetaken, m.price))
+def _render_reports(reports):
+    for app, packages in reports:
+        print('[{a.steamid: >6}] {a.name}'.format(a=app))
+        for package, snapshots in packages:
+            print('- [{p.steamid: >6}] {p.name}'.format(p=package))
+            for snapshot in snapshots:
+                print('  {s.timestamp} {s.price: >5}'.format(s=snapshot))
+
+        print('-' * 79)
 
 
 # Argtypes --------------------------------------------------------------------
