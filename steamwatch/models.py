@@ -269,6 +269,300 @@ class Database(object):
         return instance
 
 
+# select FIELDS from TABLE [where PREDICATES] [order by FIELDS asc|desc]
+# update TABLE set ASSIGNMENTS [where PREDICATES]
+# insert into TABLE fields VALUES values
+# delete from TABLE where PREDICATES
+class Statement:
+
+    def __init__(self, db, table):
+        self._db = db
+        self._table = table
+        self._where_clause = None
+        self._predicates = []
+
+    def _where(self, field):
+        self._where_clause = _Where(self)
+        predicate = _Predicate(self._where_clause, field)
+        self._where_clause._predicates.append(predicate)
+        return predicate
+
+    def _build_where(self):
+        if self._where_clause:
+            return self._where_clause._build_fragment()
+        else:
+            return ''
+
+        if self._predicates:
+            fragment = 'WHERE '
+            for predicate in self._predicates:
+                fragment += predicate._build_predicate()
+        else:
+            fragment = ''
+
+        return fragment
+
+    def _where_params(self):
+        if self._where_clause:
+            return self._where_clause._params()
+        else:
+            return []
+
+    @property
+    def sql(self):
+        return self._build()
+
+    @property
+    def params(self):
+        return self._params()
+
+    def _exec(self):
+        return self._db._exec(self.sql, self.params)
+
+
+class _Where:
+
+    def __init__(self, statement,):
+        self._statement = statement
+        self._predicates = []
+
+    def or_is(self, field):
+        return self._op('OR', field)
+
+    def or_not(self, field):
+        return self._op('OR NOT', field)
+
+    def and_is(self, field):
+        return self._op('AND', field)
+
+    def and_not(self, field):
+        return self._op('AND NOT', field)
+
+    def _op(self, token, field):
+        self._predicates.append(_Token(token))
+        predicate = _Predicate(self, field)
+        self._predicates.append(predicate)
+        return predicate
+
+    def _build_fragment(self):
+        fragment = 'WHERE '
+        fragment += ' '.join([p._build_predicate() for p in self._predicates])
+        return fragment
+
+    def _params(self):
+        return [p.predicate for p in self._predicates if hasattr(p, 'predicate')]
+
+    def __getattr__(self, name):
+        print(name)
+        if name in ('or_is', 'or_not', 'and_is', 'and_not'):
+            context = self
+        else:
+            context = self._statement
+        return getattr(context, name)
+
+
+class _Predicate:
+
+    def __init__(self, parent, field):
+        self._parent = parent
+        self._field = field
+        self._operator = None
+        self.predicate = None
+
+    def equals(self, predicate):
+        self._operator = '='
+        self.predicate = predicate
+        return self._parent
+
+    def equals_not(self, predicate):
+        self._operator = '!='
+        self.predicate = predicate
+        return self._parent
+
+    def _build_predicate(self):
+        return self._field + self._operator + '?'
+
+
+class _Token:
+
+    def __init__(self, token):
+        self._token = token
+
+    def _build_predicate(self):
+        return self._token
+
+
+class Select(Statement):
+
+    def __init__(self, db, model):
+        super(Select, self).__init__(db, model.__table__)
+        self._model = model
+        self._predicates = []
+        self._order = []
+        self._limit = None
+
+    def where(self, field):
+        return self._where(field)
+
+    def order_by(self, field, desc=False):
+        self._order.append((field, 'DESC' if desc else 'ASC'))
+        return self
+
+    def limit(self, limit):
+        self._limit = limit
+        return self
+
+    def many(self):
+        '''Execute the select statement and map multiple model instances.'''
+        cursor = self._exec()
+        row = cursor.fetchone()
+        results = []
+        while row is not None:
+            instance = self._model.map_row(row)
+            results.append(instance)
+            row = cursor.fetchone()
+
+        return results
+
+    def one(self):
+        '''Execute the SELECT statement and require that exactly one row
+        is returned.'''
+        cursor = self._exec()
+        first = cursor.fetchone()
+        if not first:
+            raise NotFoundError
+        instance = self._model.map_row(first)
+        additional_row = cursor.fetchone()
+        if additional_row:
+            raise ValueError('Got multiple rows')
+        return instance
+
+    def _build_fields(self):
+        return ','.join([c.name for c in self._model.__columns__])
+
+    def _build_order(self):
+        if self._order:
+            fragment = 'ORDER BY '
+            fragment += ', '.join([' '.join(o) for o in self._order])
+            return fragment
+
+    def _build_limit(self):
+        if self._limit:
+            return 'LIMIT ' + str(self._limit)
+
+    def _build(self):
+        parts = [
+            'SELECT',
+            self._build_fields(),
+            'FROM',
+            self._table,
+            self._build_where(),
+            self._build_order(),
+            self._build_limit()
+        ]
+        return ' '.join([p for p in parts if p])
+
+    def _params(self):
+        params = []
+        params += self._where_params()
+        return params
+
+
+class Update(Statement):
+
+    def __init__(self, db, instance):
+        super(Update, self).__init__(db, instance.__table__)
+        self._instance = instance
+
+    def _build_assignments(self):
+        return ','.join([
+            '{c.name}=?'.format(c=c)
+            for c in self._instance.__columns__
+        ])
+
+    def _params(self):
+        params = [c.get(self._instance) for c in self._instance.__columns__]
+        params.append(self._instance.id)
+        return params
+
+    def _build(self):
+        sql = 'UPDATE '
+        sql += self._table
+        sql += ' SET '
+        sql += self._build_assignments()
+        sql += ' WHERE id=?'
+        return sql
+
+    def execute(self):
+        cursor = self._exec()
+
+
+class Insert(Statement):
+
+    def __init__(self, db, instance):
+        super(Insert, self).__init__(db, instance.__table__)
+        self._instance = instance
+
+    def _build(self):
+        values = '('
+        values += ','.join(['?' for c in self._instance.__columns__])
+        values += ')'
+        return 'INSERT INTO ' + self._table + ' VALUES ' + values
+
+    def _params(self):
+        return [c.get(self._instance) for c in self._instance.__columns__]
+
+    def execute(self):
+        cursor = self._exec()
+        self._instance.id = cursor.lastrowid
+
+
+class Delete:
+
+    def __init__(self, db, instance):
+        super(Insert, self).__init__(db, instance.__table__)
+        self._instance = instance
+
+    def _params(self):
+        return [self._instance.id]
+
+    def _build(self):
+        return 'DELETE FROM ' + self._table + ' WHERE id=?'
+
+
+class _Model:
+
+    @classmethod
+    def select(cls, db):
+        return Select(db, cls)
+
+    @classmethod
+    def get(cls, db, id):
+        return Select(db, cls).where('id').equals(id).one()
+
+    def save(self, db):
+        if getattr(self, 'id', None):
+            self._update(db)
+        else:
+            self._insert(db)
+
+    def _insert(self, db):
+        Insert(db, self).execute()
+
+    def _update(self, db):
+        Update(db, self).execute()
+
+    def delete(self, db):
+        Delete(db, self).execute()
+
+    @classmethod
+    def map_row(cls, row):
+        instance = cls()
+        for col, raw_value in zip(cls.__columns__, row):
+            col.set(instance, raw_value)
+        return instance
+
+
 class Game(object):
 
     __table__ = 'games'

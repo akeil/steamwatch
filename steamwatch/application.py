@@ -72,7 +72,7 @@ class Application(object):
 
     def _set_enabled(self, appid, enabled):
         enabled = bool(enabled)
-        game = self.db.select_one(Game, appid=appid)
+        game = self.get(appid)
         if game.enabled != enabled:
             game.enabled = enabled
             self.db.store(game)
