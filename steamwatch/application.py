@@ -56,11 +56,11 @@ class Application(object):
         :raises:
             `NotFoundError` if we are not watching the given ``appid``.
         '''
-        return self.db.select_one(Game, appid=appid)
+        return Game.select(self.db).where('appid').equals(appid).one()
 
     def ls(self):
         '''List games'''
-        return self.db.select(Game)
+        return Game.select(self.db).many()
 
     def disable(self, appid):
         '''Stop watching the given ``appid``, but do not delete it.'''
@@ -75,11 +75,12 @@ class Application(object):
         game = self.get(appid)
         if game.enabled != enabled:
             game.enabled = enabled
-            self.db.store(game)
+            game.save(self.db)
 
     def fetch_all(self):
         '''Update measures for all enabled Games.'''
-        games = self.db.select(Game, enabled=True)
+        #TODO should be possible to call .equals(True)
+        games = Game.select(self.db).where('enabled').equals('1')
         for game in games:
             self.fetch(game)
 
@@ -112,10 +113,11 @@ class Application(object):
             metacritic=data.get('metacritic', {}).get('score'),
             datetaken=datetime.now()
         )
-        self.db.store(m)
+        m.save(self.db)
 
     def _changes(self, game):
-        measures = self.db.select(Measure, gameid=game.id)
+        measures = Measure.select(self.db).where('gameid').equals(game.id)
+        #TODO order_by and limit
         measures.sort(key=lambda x: x.datetaken)
         try:
             current = measures[0]
@@ -140,13 +142,15 @@ class Application(object):
 
     def report(self, game):
         '''List Measures for the given Game.'''
-        measures = self.db.select(Measure, gameid=game.id)
+        measures = Measure.select(self.db).where('gameid').equals(game.id)
+        #TODO order_by
         measures.sort(key=lambda x: x.datetaken)
         return measures
 
     def report_all(self):
         '''List Measures for all enabled Games.'''
-        games = self.db.select(Game, enabled=True)
+        #TODO .equals(True)
+        games = Game.select(self.db).where('enabled').equals('1')
         reports = {}
         for game in games:
             reports[game] = self.report(game)

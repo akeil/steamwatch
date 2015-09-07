@@ -563,7 +563,7 @@ class _Model:
         return instance
 
 
-class Game(object):
+class Game(_Model):
 
     __table__ = 'games'
     __columns__ = (
@@ -592,7 +592,7 @@ class Game(object):
         return '<Game appid={s.appid!r}>'.format(s=self)
 
 
-class Measure(object):
+class Measure(_Model):
 
     __table__ = 'measures'
     __columns__ = (
