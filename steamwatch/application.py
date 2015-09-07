@@ -153,7 +153,8 @@ class Application(object):
                 if pid in existing:
                     pkg = existing[pid]
                 else:
-                    pkg = Package.from_apidata(pkgdata)
+                    pkg = Package.from_apidata(pid, pkgdata)
+                    pkg.link(app)
                 ss = pkg.record_snapshot(pkgdata)
                 if ss:
                     self._signal_changes(ss)
@@ -169,7 +170,7 @@ class Application(object):
                 package=ss.package
             )
 
-    def report(self, game, limit=None):
+    def report(self, app, limit=None):
         '''List Snapshots for the given Game.
 
         Returns a list of packages with their snapshots::
@@ -232,7 +233,7 @@ class Application(object):
                 log.debug(e, exc_info=True)
 
 
-def log_signal(name, app, **kwargs):
+def log_signal(name, steamwatch, **kwargs):
     '''Default hook function for signals.'''
     s = ', '.join(['{k}={v!r}'.format(k=k, v=v) for k, v in kwargs.items()])
     log.debug('Signal {n!r} with {s!r}'.format(n=name, s=s))

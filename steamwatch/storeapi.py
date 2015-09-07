@@ -59,7 +59,7 @@ def packagedetails(packageid):
     query = urlencode({'packageids': packageid})
     url = '{base}/packagedetails?{query}'.format(base=BASEURL, query=query)
     response = _get(url)
-    result = _readjson(reponse)
+    result = _readjson(response)
 
     try:
         success = result[packageid]['success']

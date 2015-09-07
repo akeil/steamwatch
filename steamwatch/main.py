@@ -262,15 +262,15 @@ def ls(subs, common):
     )
 
     def do_ls(app, options):
-        _render_games(app.ls())
+        _render_apps(app.ls())
 
     ls.set_defaults(func=do_ls)
 
 
-def _render_games(games):
-    for game in games:
-        print('{e} [{g.appid: >6}] {g.name}'.format(
-            g=game, e='*' if game.enabled else '-'))
+def _render_apps(apps):
+    for app in apps:
+        print('{e} [{a.steamid: >6}] {a.name}'.format(
+            a=app, e='*' if app.enabled else '-'))
 
 
 def fetch(subs, common):
@@ -337,14 +337,59 @@ def report(subs, common):
 
 
 def _render_reports(reports):
-    for app, packages in reports:
-        print('[{a.steamid: >6}] {a.name}'.format(a=app))
-        for package, snapshots in packages:
-            print('- [{p.steamid: >6}] {p.name}'.format(p=package))
-            for snapshot in snapshots:
-                print('  {s.timestamp} {s.price: >5}'.format(s=snapshot))
+    # 007C vertical
+    # 2015 horizontal
+    # 22AA triple vertical bar right turnstile
+    # 22AB double vertical bar right turnstile
 
-        print('-' * 79)
+    vert = '\u2502'  # │
+    turn = '\u2514'  # └╴
+    split = '\u251C' # ├╴
+    hor = '\u2500\u2574'  # ─ and ╴
+    gut = ' '
+    out = sys.stdout
+
+    def _(s):
+        out.write(s)
+
+    _('Steamwatch Report')
+    _('\n')
+    for app_index, app_packages in enumerate(reports):
+        app, packages = app_packages
+        last_app = app_index + 1 >= len(reports)
+        _(turn if last_app else split)
+        _(hor)
+        _('{a.name} [{a.steamid: >6}]'.format(a=app))
+        _('\n')
+        for pkg_index, pkg_snapshots in enumerate(packages):
+            package, snapshots = pkg_snapshots
+            last_pkg = pkg_index + 1 >= len(packages)
+            _(gut if last_app else vert)
+            _(2 * gut)
+            _(turn if last_pkg else split)
+            _(hor)
+            _('{p.name} [{p.steamid: >6}]'.format(p=package))
+            _('\n')
+            for ss_index, snapshot in enumerate(snapshots):
+                last_ss = ss_index + 1 >= len(snapshots)
+                _(gut if last_app else vert)
+                _(2 * gut)
+                _(gut if last_pkg else vert)
+                _(2 * gut)
+                _(turn if last_ss else split)
+                _(hor)
+                _(snapshot.timestamp.strftime('%Y-%m-%d %H:%M'))
+                _('  {yn}'.format(yn='Linux' if snapshot.supports_linux else '-----'))
+                _('  ')
+                if snapshot.release_date:
+                    _(snapshot.release_date.strftime('%Y-%m-%d '))
+                elif snapshot.coming_soon:
+                    _('coming soon')
+                else:
+                    _('-----------')
+
+                _('  {s.price:0>5} {s.currency:>3}'.format(s=snapshot))
+                _('\n')
 
 
 # Argtypes --------------------------------------------------------------------
