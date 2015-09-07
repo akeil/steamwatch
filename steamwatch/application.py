@@ -39,8 +39,8 @@ class Application(object):
             name = data.get('name'),
             threshold=threshold,
         )
-        # TODO: what if the game exists = sqlite3.IntegrityError?
-        self.db.store(game)
+        # TODO: what if the appid exists = sqlite3.IntegrityError?
+        game.save(self.db)
         self._signal(SIGNAL_ADDED, gameid=game.id, appid=game.appid)
 
         self._store_measure(game, data)

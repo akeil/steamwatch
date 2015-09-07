@@ -175,104 +175,7 @@ class Database(object):
         self.conn.commit()
         return cursor
 
-    def store(self, instance):
-        log.debug('Store {!r}'.format(instance))
-        if instance.id:
-            self._update(instance)
-        else:
-            self._insert(instance)
 
-    def _insert(self, instance):
-        insert = 'INSERT into {table} VALUES ({placeholders})'
-        table = instance.__table__
-        cols = instance.__columns__
-        placeholders = ','.join('?' * len(cols))
-
-        params = [col.get(instance) for col in cols]
-        sql = insert.format(table=table,placeholders=placeholders)
-        cursor = self._exec(sql, params)
-        instance.id = cursor.lastrowid
-        log.debug('Inserted row {i} into {t!r}'.format(i=instance.id, t=table))
-
-    def _update(self, instance):
-        update = 'UPDATE {table} SET {placeholders} WHERE id=?'
-        table = instance.__table__
-        cols = instance.__columns__
-
-        assignments = []
-        params = []
-        for col in cols:
-            assignments.append('{c.name}=?'.format(c=col))
-            params.append(col.get(instance))
-
-        placeholders = ','.join(assignments)
-        params.append(instance.id)
-
-        sql = update.format(table=table, placeholders=placeholders)
-        cursor = self._exec(sql, params)
-
-        if cursor.rowcount == 0:
-            raise NotFoundError
-
-        log.debug('Updated row {i} in {t!r}'.format(i=instance.id, t=table))
-
-    def select(self, modelclass, **kwargs):
-        cursor = self._do_select(modelclass, **kwargs)
-        results = []
-        row = cursor.fetchone()
-        while row is not None:
-            instance = self._map(modelclass, row)
-            results.append(instance)
-            row = cursor.fetchone()
-
-        return results
-
-    def select_one(self, modelclass, **kwargs):
-        cursor = self._do_select(modelclass, **kwargs)
-        row = cursor.fetchone()
-        if not row:
-            raise NotFoundError
-
-        additional_row = cursor.fetchone()
-        if additional_row:
-            raise ValueError('Query returned more than one row')
-        else:
-            return self._map(modelclass, row)
-
-    def _do_select(self, modelclass, **kwargs):
-        select = 'SELECT {fields} from {table}'
-        table = modelclass.__table__
-        cols = modelclass.__columns__
-        col_by_name = {col.name: col for col in cols}
-
-        fields = ', '.join(col.name for col in cols)
-        sql = select.format(table=table, fields=fields)
-
-        if kwargs:
-            predicates = []
-            params = []
-            for k, v in kwargs.items():
-                predicates.append('{field}=?'.format(field=k))
-                params.append(col_by_name[k].from_python(v))
-            where = ' where {}'.format(' AND '.join(predicates))
-        else:
-            where = ''
-            params = []
-
-        return self._exec(sql+where, params)
-
-    def _map(self, modelclass, row):
-        instance = modelclass()
-        cols = modelclass.__columns__
-        for col, raw_value in zip(cols, row):
-            col.set(instance, raw_value)
-        return instance
-
-
-# select FIELDS from TABLE [where PREDICATES] [order by FIELDS asc|desc]
-# update TABLE set ASSIGNMENTS [where PREDICATES]
-# insert into TABLE fields VALUES values
-# delete from TABLE where PREDICATES
 class Statement:
 
     def __init__(self, db, table):
@@ -495,6 +398,8 @@ class Update(Statement):
 
     def execute(self):
         cursor = self._exec()
+        if cursor.rowcount == 0:
+            raise NotFoundError
 
 
 class Insert(Statement):

@@ -11,6 +11,8 @@ import pytest
 
 from steamwatch import models
 from steamwatch.models import _Model
+from steamwatch.models import Game
+from steamwatch.models import Measure
 from steamwatch.models import Column
 from steamwatch.models import NotFoundError
 from steamwatch.models import Select
@@ -60,12 +62,12 @@ def test_db_insert(db):
         metacritic=77,
         currency='EUR',
     )
-    db.store(model)
+    model.save(db)
     assert model.id > 0
 
 
 def test_db_select(db):
-    results = db.select(models.Measure, gameid=1)
+    results = Measure.select(db).where('gameid').equals('1').many()
     assert len(results) == 3
     assert type(results[0]) == models.Measure
 
@@ -75,8 +77,8 @@ def test_game_store_load(emptydb):
         appid='123',
         name='Game One'
     )
-    emptydb.store(game)
-    reloaded = emptydb.select_one(models.Game, id=game.id)
+    game.save(emptydb)
+    reloaded = Game.get(emptydb, game.id)
     assert game.id is not None
     assert reloaded.id == game.id
     assert reloaded.appid == game.appid
@@ -86,7 +88,8 @@ def test_game_store_load(emptydb):
 def test_game_select_enabled(db):
     # relies on fixture data with three games
     # and game with appid 333 being disabled
-    games = db.select(models.Game, enabled=True)
+    #TODO .equals(True)
+    games = Game.select(db).where('enabled').equals('1').many()
     assert len(games) == 2
     assert '333' not in [game.appid for game in games]
 
@@ -96,19 +99,20 @@ def test_measure_store_load(emptydb):
 
 
 def test_not_found(db):
-    with pytest.raises(models.NotFoundError):
-        db.select_one(models.Game, appid='does-not-exist')
+    with pytest.raises(NotFoundError):
+        Game.select(db).where('appid').equals('does-not-exist').one()
 
 
 def test_update_non_existing(db):
-    non_existing = models.Game(
+    # raise error if we assign our own ids
+    non_existing = Game(
         appid='999',
         enabled=True,
         name='Foo'
     )
     non_existing.id = 999
-    with pytest.raises(models.NotFoundError):
-        db.store(non_existing)
+    with pytest.raises(NotFoundError):
+        non_existing.save(db)
 
 
 def test_convert_to_boolean():
