@@ -533,6 +533,25 @@ class Game(_Model):
     def disable(self):
         self.enabled = False
 
+    def measure(self, data):
+        '''Create a Measure for this Game with ``data`` from the storeapi.'''
+        if not self.id:
+            raise ValueError('Cannot create measure for game w/o id')
+
+        po = data.get('price_overview', {})
+        price = po.get('final')
+        baseprice = po.get('initial')
+
+        return Measure(
+            gameid=self.id,
+            currency=po.get('currency'),
+            price=price / 100.0 if price else None,
+            baseprice=baseprice / 100.0 if baseprice else None,
+            discount=po.get('discount_percent'),
+            metacritic=data.get('metacritic', {}).get('score'),
+            datetaken=datetime.now()
+        )
+
     def __repr__(self):
         return '<Game appid={s.appid!r}>'.format(s=self)
 

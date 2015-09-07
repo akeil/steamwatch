@@ -24,6 +24,7 @@ from urllib.error import ContentTooShortError
 import json
 import logging
 
+from steamwatch.exceptions import GameNotFoundError
 
 BASEURL = 'http://store.steampowered.com/api'
 log = logging.getLogger(__name__)
@@ -41,8 +42,16 @@ def appdetails(appid):
     url = '{base}/appdetails?{query}'.format(base=BASEURL, query=query)
     response = _get(url)
     result = _readjson(response)
-    # TODO check result[appid]['success'] ?
-    return result
+
+    try:
+        success = result[appid]['success']
+    except KeyError:
+        success = False
+
+    if not success:
+        raise GameNotFoundError
+    else:
+        return result[appid]['data']
 
 
 def packagedetails(*packageids):

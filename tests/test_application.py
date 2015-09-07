@@ -40,21 +40,17 @@ def mockapi(monkeypatch):
 
     def mock_appdetails(appid):
         return {
-            appid: {
-                'data': {
-                    'metacritic': {
-                        'score': 70
-                    },
-                    'name': 'Name of the Game',
-                    'price_overview': {
-                        'currency': 'EUR',
-                        'discount_percent': 66,
-                        'final': 679,
-                        'initial': 1999,
-                    },
-                'success': True,
-                },
+            'metacritic': {
+                'score': 70
             },
+            'name': 'Name of the Game',
+            'price_overview': {
+                'currency': 'EUR',
+                'discount_percent': 66,
+                'final': 679,
+                'initial': 1999,
+            },
+        'success': True,
         }
 
     monkeypatch.setattr(storeapi, 'appdetails', mock_appdetails)

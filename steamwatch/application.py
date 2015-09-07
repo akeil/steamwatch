@@ -58,11 +58,7 @@ class Application(object):
             should_update = True
 
         else:  # not previously known
-            results = storeapi.appdetails(appid)
-            try:
-                data = results[appid]['data']
-            except KeyError:
-                raise GameNotFoundError('No game with appid {!r}.'.format(appid))
+            data = storeapi.appdetails(appid)
             game = Game(
                 appid=appid,
                 name = data.get('name'),
@@ -139,40 +135,25 @@ class Application(object):
             return
 
         appid = game.appid
-        results = storeapi.appdetails(appid)
-        data = results[appid]['data']
-        self._store_measure(game, data)
+        data = storeapi.appdetails(appid)
+        self._store_measure(game.measure(data))
 
-    def _store_measure(self, game, data):
-        po = data.get('price_overview', {})
-        currency = po.get('currency')
-        price = po.get('final')
-        baseprice = po.get('initial')
-        discount = po.get('discount_percent')
-
-        current = Measure(
-            gameid=game.id,
-            currency=currency,
-            price=price / 100.0 if price else None,
-            baseprice=baseprice / 100.0 if baseprice else None,
-            discount=discount,
-            metacritic=data.get('metacritic', {}).get('score'),
-            datetaken=datetime.now()
-        )
-
-        select = Measure.select(self.db).where('gameid').equals(game.id)
+    def _store_measure(self, measure):
+        # check if this measure differs from the previous one
+        select = Measure.select(self.db)
+        select.where('gameid').equals(measure.gameid)
         select.order_by('datetaken', desc=True).limit(1)
         try:
             previous = select.one()
         except NotFoundError:
             previous = None
 
-        if not previous or previous.is_different(current):
-            current.save(self.db)
+        if not previous or previous.is_different(measure):
+            measure.save(self.db)
             if previous:
-                self._changes(game, current, previous)
+                self._signal_changes(game, measure, previous)
 
-    def _changes(self, game, current, previous):
+    def _signal_changes(self, game, current, previous):
         if current.price != previous.price:
             self._signal(SIGNAL_PRICE,
                 gameid=game.id,
