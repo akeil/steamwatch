@@ -80,7 +80,7 @@ class Application(object):
     def fetch_all(self):
         '''Update measures for all enabled Games.'''
         #TODO should be possible to call .equals(True)
-        games = Game.select(self.db).where('enabled').equals('1')
+        games = Game.select(self.db).where('enabled').equals('1').many()
         for game in games:
             self.fetch(game)
 
@@ -116,7 +116,7 @@ class Application(object):
         m.save(self.db)
 
     def _changes(self, game):
-        measures = Measure.select(self.db).where('gameid').equals(game.id)
+        measures = Measure.select(self.db).where('gameid').equals(game.id).many()
         #TODO order_by and limit
         measures.sort(key=lambda x: x.datetaken)
         try:
@@ -142,7 +142,7 @@ class Application(object):
 
     def report(self, game):
         '''List Measures for the given Game.'''
-        measures = Measure.select(self.db).where('gameid').equals(game.id)
+        measures = Measure.select(self.db).where('gameid').equals(game.id).many()
         #TODO order_by
         measures.sort(key=lambda x: x.datetaken)
         return measures
@@ -150,7 +150,7 @@ class Application(object):
     def report_all(self):
         '''List Measures for all enabled Games.'''
         #TODO .equals(True)
-        games = Game.select(self.db).where('enabled').equals('1')
+        games = Game.select(self.db).where('enabled').equals('1').many()
         reports = {}
         for game in games:
             reports[game] = self.report(game)
