@@ -246,7 +246,7 @@ class Application(object):
                 ...
             ]
         '''
-        apps = App.select().where(App.enabled == True)
+        apps = App.select().where(App.enabled == True).order_by(App.name)
         results = []
         for app in apps:
             results.append((app, self.report(app, limit=limit)))
