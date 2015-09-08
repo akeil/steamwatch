@@ -262,8 +262,20 @@ def ls(subs, common):
         help='List watched games'
     )
 
+    ls.add_argument(
+        '-f', '--format',
+        choices=('tree', 'tab'),
+        help='output format',
+    )
+
     def do_ls(app, options):
-        _render_apps(app.ls())
+        renderers = {
+            'tree': TreeRenderer,
+            'tab': TabularRenderer,
+        }
+        renderer_cls = renderers[options.format or options.list_format]
+        renderer = renderer_cls(sys.stdout, options)
+        renderer.render_ls(app.ls())
 
     ls.set_defaults(func=do_ls)
 

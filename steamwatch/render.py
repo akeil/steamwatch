@@ -20,7 +20,7 @@ class Renderer:
         self.out = out
         self.options = options
 
-    def render_ls(self):
+    def render_ls(self, apps):
         pass
 
     def render_report(self, report):
@@ -63,6 +63,7 @@ class TreeRenderer(Renderer):
             self.vert_bold = '\u2503'
             self.split = '\u251C' # ├╴
             self.split_bold = '\u2523' # ├╴
+            self.split_down = '\u252C'
             self.turn = '\u2514'  # └╴
             self.turn_bold = '\u2517'  # └╴
             self.hor = '\u2500'  # ─
@@ -75,6 +76,7 @@ class TreeRenderer(Renderer):
             self.vert_bold = '|'
             self.split = '+'
             self.split_bold = '+'
+            self.split_down = '+'
             self.turn = '`'
             self.turn_bold = '`'
             self.hor = '-'
@@ -163,13 +165,76 @@ class TreeRenderer(Renderer):
         self.write(bold('{s.price:>5}'.format(s=snapshot)))
         self.writeln()
 
+    def render_ls(self, apps):
+        # root
+        self.write('Watched Apps + Packages')
+        self.writeln()
+
+        apps = [a for a in apps]  # trigger query
+        for app_index, app in enumerate(apps):
+            last_app = app_index == len(apps) - 1
+            self._render_app(app, last_app)
+            packages = [p for p in app.packages]  # trigger query
+            for pkg_index, package in enumerate(packages):
+                last_pkg = pkg_index == len(packages) - 1
+                self._render_package(package, last_app, last_pkg, app.enabled)
+
+    def _render_app(self, app, last_app):
+        # app level
+        self.write(self.turn if last_app else self.split)
+        self.write(self.hor)
+        self.write(self.hor)
+        self.write(self.split_down)
+        self.write(self.hor)
+        self.write(self.hor_end)
+
+        # details
+        self.write(dim('[{a.steamid: >6}]'.format(a=app)))
+        self.write(' ')
+        style = bold if app.enabled else red
+        self.write(style(app.name))
+        if not app.enabled:
+            self.write(red(' (disabled)'))
+        self.writeln()
+
+    def _render_package(self, pkg, last_app, last_pkg, app_enabled):
+        # app level
+        self.write(self.gut if last_app else self.vert)
+        self.write(self.gut)
+        self.write(self.gut)
+
+        # pkg level
+        self.write(self.turn if last_pkg else self.split)
+        self.write(self.hor)
+        self.write(self.hor_end)
+
+        # details
+        self.write(dim('[{p.steamid: >6}]'.format(p=pkg)))
+        self.write(' ')
+        style = neutral if app_enabled else dim
+        self.write(style(pkg.name))
+        self.writeln()
+
 
 class TabularRenderer(Renderer):
     '''Render as a table like this:
 
+    Apps
+    ----
+    ::
+
+        +--------+-------------+----------+
+        | ID     | Name        | Active   |
+        +--------+-------------+----------+
+        | 000006 | One Game    | disabled |
+        +--------+-------------|----------+
+        | 004711 | One Package |          |
+        +--------+-------------|----------+
+
     Report
     ------
     ::
+
         -------+--------------------------------------------------------------+
         ID     | Game                                                         |
         ID     | Package     | Timestamp        | Linux | Release     | Price |
@@ -466,6 +531,121 @@ class TabularRenderer(Renderer):
             else:
                 return str(raw)
 
+
+    def render_ls(self, apps):
+        available = 79
+        used_by_fields = 6 + 8  # ID and disabled
+        used_by_grid = 4
+        used_by_gutter = 6
+        name_width = available - used_by_fields - used_by_grid - used_by_gutter
+
+        def grid():
+            self.write(self.left_split)
+            self.write(self.hor)
+            self.write(self.hor * 6)  # length of ID
+            self.write(self.hor)
+            self.write(self.cross)
+            self.write(self.hor)
+            self.write(self.hor * name_width)  # length of Name
+            self.write(self.hor)
+            self.write(self.cross)
+            self.write(self.hor)
+            self.write(self.hor * 8)  # length of Disabled
+            self.write(self.hor)
+            self.write(self.right_split)
+            self.writeln()
+
+        # header grid
+        self.write(self.top_left)
+        self.write(self.top)
+        self.write(self.top * 6)  # length of ID
+        self.write(self.top)
+        self.write(self.top_split)
+        self.write(self.top)
+        self.write(self.top * name_width)  # length of Name
+        self.write(self.top)
+        self.write(self.top_split)
+        self.write(self.top)
+        self.write(self.top * 8)  # length of Disabled
+        self.write(self.top)
+        self.write(self.top_right)
+        self.writeln()
+
+        # header
+        self.write(self.left)
+        self.write(' ')
+        self.write('{s: <6}'.format(s='ID'))
+        self.write(' ')
+        self.write(self.center)
+        self.write(' ')
+        self.write('Name')
+        self.write(' ' * (name_width - 4))
+        self.write(' ')
+        self.write(self.center)
+        self.write(' ')
+        self.write('{s: <8}'.format(s='Status'))
+        self.write(' ')
+        self.write(self.right)
+        self.writeln()
+
+        grid()
+        apps = [a for a in apps]  # trigger query
+        for index, app in enumerate(apps):
+            last = index == len(apps) - 1
+            self.write(self.left)
+            self.write(' ')
+            self.write(dim('{s: >6}'.format(s=app.steamid)))  # length of ID
+            self.write(' ')
+            self.write(self.center)
+            self.write(' ')
+            style = bold if app.enabled else neutral
+            self.write(style(app.name[:name_width]))
+            self.write(' ' * max(0, name_width - len(app.name)))
+            self.write(' ')
+            self.write(self.center)
+            self.write(' ')
+            self.write(' ' * 8 if app.enabled else red('disabled'))
+            self.write(' ')
+            self.write(self.right)
+            self.writeln()
+
+            for pkg in app.packages:
+                self.write(self.left)
+                self.write(' ')
+                self.write(dim('{s: >6}'.format(s=pkg.steamid)))
+                self.write(' ')
+                self.write(self.center)
+                self.write(' ')
+                style = neutral if app.enabled else dim
+                self.write(style(pkg.name[:name_width]))
+                self.write(' ' * max(0, name_width - len(pkg.name)))
+                self.write(' ')
+                self.write(self.center)
+                self.write(' ')
+                self.write(' ' * 8)
+                self.write(' ')
+                self.write(self.right)
+                self.writeln()
+
+            if not last:
+                grid()
+
+        # bottom grid
+        self.write(self.bottom_left)
+        self.write(self.bottom)
+        self.write(self.bottom * 6)  # length of ID
+        self.write(self.bottom)
+        self.write(self.bottom_split)
+        self.write(self.bottom)
+        self.write(self.bottom * name_width)  # length of Name
+        self.write(self.bottom)
+        self.write(self.bottom_split)
+        self.write(self.bottom)
+        self.write(self.bottom * 8)  # length of Disabled
+        self.write(self.bottom)
+        self.write(self.bottom_right)
+        self.writeln()
+
     @staticmethod
     def _timestamp(v):
         if v:
@@ -492,8 +672,18 @@ class TabularRenderer(Renderer):
 def bold(text):
     return '\033[1m' + text + '\033[0m'
 
+
 def dim(text):
     return '\033[2m' + text + '\033[0m'
+
+
+def neutral(text):
+    return text
+
+
+def red(text):
+    return '\033[22;31m' + text + '\033[0m'
+
 
 # RSSRenderer
 # JSONRenderer
