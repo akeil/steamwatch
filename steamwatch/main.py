@@ -24,6 +24,7 @@ except ImportError:
 import steamwatch
 from steamwatch import application
 from steamwatch.exceptions import ConfigurationError
+from steamwatch.model import App
 
 
 PROG_NAME = 'steamwatch'
@@ -284,17 +285,17 @@ def fetch(subs, common):
         help=('List of game ids to query. Queries all games if omitted')
     )
 
-    def do_fetch(app, options):
+    def do_fetch(application, options):
         if options.games:
-            for game in options.games:
-                g = app.get(game)
-                if not g:
+            for steamid in options.games:
+                app = App.by_steamid(steamid)
+                if not app:
                     log.warning(
-                        'Game with id {g!r} is not watched'.format(g=game))
+                        'Game with id {s!r} is not watched'.format(s=steamid))
                 else:
-                    app.fetch(g)
+                    application.fetch(app)
         else:
-            app.fetch_all()
+            application.fetch_all()
 
     fetch.set_defaults(func=do_fetch)
 
@@ -317,18 +318,20 @@ def report(subs, common):
         help='Limit the number of entries per game'
     )
 
-    def do_report(app, options):
+    def do_report(application, options):
         if options.games:
             reports = {}
-            for game in options.games:
-                g = app.get(game)
+            for steamid in options.games:
+                app = App.by_steamid(steamid)
                 if not g:
                     log.warning(
-                        'Game with id {g!r} is not watched'.format(g=game))
+                        'Game with id {s!r} is not watched'.format(s=steamid))
                 else:
-                    reports = [(g, app.report(g, limit=options.limit)),]
+                    reports = [
+                        (app, application.report(app, limit=options.limit)),
+                    ]
         else:
-            reports = app.report_all(limit=options.limit)
+            reports = application.report_all(limit=options.limit)
 
         _render_reports(reports)
 

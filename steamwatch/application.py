@@ -56,7 +56,7 @@ class Application(object):
         If the item is already being watched, nothing happens.
         '''
         should_update = False
-        known = self.get(appid)
+        known = App.by_steamid(appid)
 
         if known and known.enabled:
             log.warning(('Attempted to add {a!r} to the watchlist'
@@ -89,7 +89,7 @@ class Application(object):
         (which will completely remove the game and all measures.)
 
         If the game is currently not being watched, nothing happens.'''
-        app = self.get(appid)
+        app = App.by_steamid(appid)
         if app is None:
             log.warning(('Attempted to remove {a!r} from the watchlist'
                 ' but it was not watched.').format(a=appid))
@@ -110,18 +110,6 @@ class Application(object):
 
         self._signal(SIGNAL_REMOVED, app=app)
 
-    def get(self, appid):
-        '''Get the :class:`Game` that is associated with the given ``appid``.
-
-        :param str appid:
-            The steam appid.
-        :rtype:
-            A :class:`Game` object.
-        :raises:
-            `NotFoundError` if we are not watching the given ``appid``.
-        '''
-        return App.select().where(App.steamid==appid).first()
-
     def ls(self):
         '''List apps'''
         select = App.select()  # all
@@ -140,8 +128,7 @@ class Application(object):
                 a=app))
             return
 
-        appid = app.steamid
-        appdata = storeapi.appdetails(appid)
+        appdata = storeapi.appdetails(app.steamid)
         found = appdata.get('packages', [])
         existing = {p.steamid: p for p in app.packages}
         for pid in found:

@@ -13,6 +13,7 @@ import pytest
 from steamwatch import application
 from steamwatch import storeapi
 from steamwatch import model
+from steamwatch.model import App
 
 
 @pytest.fixture
@@ -72,11 +73,11 @@ def test_watch(app, mockapi):
 def test_unwatch(app, mockapi):
     app.watch('123')
     app.unwatch('123', delete=False)
-    game = app.get('123')
+    game = App.by_steamid('123')
     assert not game.enabled
 
     app.unwatch('123', delete=True)
-    assert app.get('123') is None
+    assert App.by_steamid('123') is None
 
 
 def test_unwatch_non_existing(app):
@@ -85,15 +86,15 @@ def test_unwatch_non_existing(app):
 
 def test_watch_enable(app, mockapi):
     app.watch('123')
-    game = app.get('123')
+    game = App.by_steamid('123')
     assert game.enabled  # precondition
 
     app.unwatch('123', delete=False)
-    game = app.get('123')
+    game = App.by_steamid('123')
     assert not game.enabled
 
     app.watch('123')
-    game = app.get('123')
+    game = App.by_steamid('123')
     assert game.enabled  # precondition
 
 

@@ -86,6 +86,11 @@ class App(BaseModel):
         return [ap.package for ap in self.app_packages]
 
     @classmethod
+    def by_steamid(cls, steamid):
+        '''Find an App by its ``steamid``'''
+        return cls.select().where(cls.steamid==steamid).limit(1).first()
+
+    @classmethod
     def from_apidata(cls, steamid, d, **extra):
         return cls.create(
             steamid=steamid,
