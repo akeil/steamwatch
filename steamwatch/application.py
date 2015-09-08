@@ -153,6 +153,7 @@ class Application(object):
                     # might be present but not linked to this app
                     pkg = Package.by_steamid(pid)
                     if not pkg:
+                        # not yet in db - create it
                         pkg = Package.from_apidata(pid, pkgdata)
                     pkg.link(app)
 

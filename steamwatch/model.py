@@ -165,6 +165,10 @@ class Snapshot(BaseModel):
 
     @classmethod
     def from_apidata(self, pkg, data):
+        '''Create a Snapshot instance with package details from the storeapi.
+
+        The Snapshot is not saved to the database.
+        '''
         price = data.get('price', {})
         release = data.get('release_date', {})
         return Snapshot(
@@ -180,8 +184,13 @@ class Snapshot(BaseModel):
     @property
     def previous(self):
         '''Get the Snapshot that was recorded before this one.'''
-        select = Snapshot.select().order_by(Snapshot.timestamp.desc())
-        select.offset(1).limit(2)
+        select = Snapshot.select().where(Snapshot.package==self.package)
+        select.order_by(Snapshot.timestamp.desc())
+        if self.id:
+            # TODO only works if this is the most recent snapshot
+            select.offset(1).limit(1)
+        else:
+            select.limit(1)
         return select.first()
 
     def diff(self, other=None):
