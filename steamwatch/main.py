@@ -25,6 +25,7 @@ import steamwatch
 from steamwatch import application
 from steamwatch.exceptions import ConfigurationError
 from steamwatch.model import App
+from steamwatch.render import TabularRenderer
 from steamwatch.render import TreeRenderer
 
 PROG_NAME = 'steamwatch'
@@ -319,6 +320,12 @@ def report(subs, common):
         help='Limit the number of entries per game'
     )
 
+    report.add_argument(
+        '-f', '--format',
+        choices=('tree', 'tab'),
+        help='output format',
+    )
+
     def do_report(application, options):
         if options.games:
             reports = []
@@ -334,7 +341,12 @@ def report(subs, common):
         else:
             reports = application.report_all(limit=options.limit)
 
-        renderer = TreeRenderer(sys.stdout, options)
+        renderers = {
+            'tree': TreeRenderer,
+            'tab': TabularRenderer
+        }
+        renderer_cls = renderers[options.format or options.report_format]
+        renderer = renderer_cls(sys.stdout, options)
         renderer.render_report(reports)
 
     report.set_defaults(func=do_report)
