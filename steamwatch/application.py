@@ -150,9 +150,12 @@ class Application(object):
                 if pid in existing:
                     pkg = existing[pid]
                 else:
-                    #TODO check if we already have it
-                    pkg = Package.from_apidata(pid, pkgdata)
+                    # might be present but not linked to this app
+                    pkg = Package.by_steamid(pid)
+                    if not pkg:
+                        pkg = Package.from_apidata(pid, pkgdata)
                     pkg.link(app)
+
                 ss = pkg.record_snapshot(pkgdata)
                 if ss:
                     self._signal_changes(ss)
