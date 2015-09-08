@@ -68,8 +68,9 @@ setup(
             'steamwatch = steamwatch.main:main',
         ],
         'steamwatch.signals': [
-            'added = steamwatch.application:log_signal',
-            'removed = steamwatch.application:log_signal',
+            'app_added = steamwatch.application:log_signal',
+            'app_removed = steamwatch.application:log_signal',
+            'package_linked = steamwatch.application:log_signal',
             'threshold = steamwatch.application:log_signal',
             'currency_changed = steamwatch.application:log_signal',
             'price_changed = steamwatch.application:log_signal',

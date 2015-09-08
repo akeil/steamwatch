@@ -1,6 +1,24 @@
 #-*- coding: utf-8 -*-
 '''
 Main application module.
+
+Signals
+-------
+THe follwoing signals are emitted:
+
+Signal                 args
+====================== ===========================
+app_added              app
+app_removed            app
+package_linked         package, app
+---------------------- --------------------------
+currency_changed       current, previous, package
+price_changed          current, previous, package
+release_date_changed   current, previous, package
+coming_soon_changed    current, previous, package
+supports_linux_changed current, previous, package
+====================== ==========================
+
 '''
 import logging
 
@@ -19,8 +37,9 @@ log = logging.getLogger(__name__)
 
 
 EP_SIGNALS = 'steamwatch.signals'
-SIGNAL_ADDED = 'added'
-SIGNAL_REMOVED = 'removed'
+SIGNAL_APP_ADDED = 'app_added'
+SIGNAL_APP_REMOVED = 'app_removed'
+SIGNAL_PACKAGE_LINKED = 'package_linked'
 SIGNAL_THRESHOLD = 'threshold'
 
 SIGNAL_CURRENCY = 'currency_changed'
@@ -54,6 +73,8 @@ class Application(object):
         *enabled*.
 
         If the item is already being watched, nothing happens.
+
+        Emits ``SIGNAL_APP_ADDED`` when the application is added/enabled.
         '''
         should_update = False
         known = App.by_steamid(appid)
@@ -76,7 +97,7 @@ class Application(object):
 
         if should_update:
             log.info('{a.name!r} was added to the watchlist.'.format(a=app))
-            self._signal(SIGNAL_ADDED, app=app)
+            self._signal(SIGNAL_APP_ADDED, app=app)
             self.fetch(app)
 
         return app
@@ -88,7 +109,10 @@ class Application(object):
         unless the optional parameter ``delete`` is set to *True*
         (which will completely remove the game and all measures.)
 
-        If the game is currently not being watched, nothing happens.'''
+        If the game is currently not being watched, nothing happens.
+
+        Emits ``SIGNAL_APP_REMOVED`` when the application is deleted/disabled.
+        '''
         app = App.by_steamid(appid)
         if app is None:
             log.warning(('Attempted to remove {a!r} from the watchlist'
@@ -134,7 +158,7 @@ class Application(object):
             app.save()
             log.info('Disabled {a.name!r}'.format(a=app))
 
-        self._signal(SIGNAL_REMOVED, app=app)
+        self._signal(SIGNAL_APP_REMOVED, app=app)
 
     def ls(self):
         '''List apps'''
@@ -169,6 +193,7 @@ class Application(object):
                         # not yet in db - create it
                         pkg = Package.from_apidata(pid, pkgdata)
                     pkg.link(app)
+                    self._signal(SIGNAL_PACKAGE_LINKED, package=pkg, app=app)
 
                 ss = pkg.record_snapshot(pkgdata)
                 if ss:
