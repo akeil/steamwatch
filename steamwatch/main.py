@@ -25,7 +25,7 @@ import steamwatch
 from steamwatch import application
 from steamwatch.exceptions import ConfigurationError
 from steamwatch.model import App
-
+from steamwatch.render import TreeRenderer
 
 PROG_NAME = 'steamwatch'
 VERSION = steamwatch.__version__
@@ -334,65 +334,10 @@ def report(subs, common):
         else:
             reports = application.report_all(limit=options.limit)
 
-        _render_reports(reports)
+        renderer = TreeRenderer(sys.stdout, options)
+        renderer.render_report(reports)
 
     report.set_defaults(func=do_report)
-
-
-def _render_reports(reports):
-    # 007C vertical
-    # 2015 horizontal
-    # 22AA triple vertical bar right turnstile
-    # 22AB double vertical bar right turnstile
-
-    vert = '\u2502'  # │
-    turn = '\u2514'  # └╴
-    split = '\u251C' # ├╴
-    hor = '\u2500\u2574'  # ─ and ╴
-    gut = ' '
-    out = sys.stdout
-
-    def _(s):
-        out.write(s)
-
-    _('Steamwatch Report')
-    _('\n')
-    for app_index, app_packages in enumerate(reports):
-        app, packages = app_packages
-        last_app = app_index + 1 >= len(reports)
-        _(turn if last_app else split)
-        _(hor)
-        _('{a.name} [{a.steamid: >6}]'.format(a=app))
-        _('\n')
-        for pkg_index, pkg_snapshots in enumerate(packages):
-            package, snapshots = pkg_snapshots
-            last_pkg = pkg_index + 1 >= len(packages)
-            _(gut if last_app else vert)
-            _(2 * gut)
-            _(turn if last_pkg else split)
-            _(hor)
-            _('{p.name} [{p.steamid: >6}]'.format(p=package))
-            _('\n')
-            for ss_index, snapshot in enumerate(snapshots):
-                last_ss = ss_index + 1 >= len(snapshots)
-                _(gut if last_app else vert)
-                _(2 * gut)
-                _(gut if last_pkg else vert)
-                _(2 * gut)
-                _(turn if last_ss else split)
-                _(hor)
-                _(snapshot.timestamp.strftime('%Y-%m-%d %H:%M'))
-                _('  {yn}'.format(yn='Linux' if snapshot.supports_linux else '-----'))
-                _('  ')
-                if snapshot.release_date:
-                    _(snapshot.release_date.strftime('%Y-%m-%d '))
-                elif snapshot.coming_soon:
-                    _('coming soon')
-                else:
-                    _('-----------')
-
-                _('  {s.price:0>5} {s.currency:>3}'.format(s=snapshot))
-                _('\n')
 
 
 # Argtypes --------------------------------------------------------------------
