@@ -51,16 +51,37 @@ class Renderer:
         self.write('\n')
 
 
-VERT = '\u2502'  # │
-SPLIT = '\u251C' # ├╴
-TURN = '\u2514'  # └╴
-HOR = '\u2500'  # ─
-HOR_END = '\u2574'  # ╴
-GUT = ' '
-
-
 class TreeRenderer(Renderer):
     #TODO: convert datetimes to local tz
+
+    def __init__(self, out, options):
+        super(TreeRenderer, self).__init__(out, options)
+
+        unicode = True
+        if unicode:
+            self.vert = '\u2502'  # │
+            self.vert_bold = '\u2503'
+            self.split = '\u251C' # ├╴
+            self.split_bold = '\u2523' # ├╴
+            self.turn = '\u2514'  # └╴
+            self.turn_bold = '\u2517'  # └╴
+            self.hor = '\u2500'  # ─
+            self.hor_bold = '\u2501'
+            self.hor_end = '\u2574'  # ╴
+            self.hor_end_bold = '\u2578'
+            self.gut = ' '
+        else:
+            self.vert = '|'
+            self.vert_bold = '|'
+            self.split = '+'
+            self.split_bold = '+'
+            self.turn = '`'
+            self.turn_bold = '`'
+            self.hor = '-'
+            self.hor_bold = '-'
+            self.hor_end = '-'
+            self.hor_end_bold = '-'
+            self.gut = ' '
 
     def render_report(self, report):
         self._render_root()
@@ -83,48 +104,48 @@ class TreeRenderer(Renderer):
 
     def _render_app(self, app, last_app):
         # app level
-        self.write(TURN if last_app else SPLIT)
-        self.write(HOR)
-        self.write(HOR_END)
+        self.write(self.turn_bold if last_app else self.split_bold)
+        self.write(self.hor_bold)
+        self.write(self.hor_end_bold)
 
         # app details
-        self.write(app.name)
+        self.write(bold(app.name))
         self.write(' ')
-        self.write(app.steamid)
+        self.write(dim('[{s: >6}]'.format(s=app.steamid)))
         self.writeln()
 
     def _render_pkg(self, pkg, last_app, last_pkg):
         # app level
-        self.write(GUT if last_app else VERT)
-        self.write(GUT)
-        self.write(GUT)
+        self.write(self.gut if last_app else self.vert_bold)
+        self.write(self.gut)
+        self.write(self.gut)
 
         # pkg level
-        self.write(TURN if last_pkg else SPLIT)
-        self.write(HOR)
-        self.write(HOR_END)
+        self.write(self.turn if last_pkg else self.split)
+        self.write(self.hor)
+        self.write(self.hor_end)
 
         # details
         self.write(pkg.name)
         self.write(' ')
-        self.write(pkg.steamid)
+        self.write(dim('[{s: >6}]'.format(s=pkg.steamid)))
         self.writeln()
 
     def _render_snapshot(self, snapshot, last_app, last_pkg, last_snapshot):
         # app level
-        self.write(GUT if last_app else VERT)
-        self.write(GUT)
-        self.write(GUT)
+        self.write(self.gut if last_app else self.vert_bold)
+        self.write(self.gut)
+        self.write(self.gut)
 
         # pkg level
-        self.write(GUT if last_pkg else VERT)
-        self.write(GUT)
-        self.write(GUT)
+        self.write(self.gut if last_pkg else self.vert)
+        self.write(self.gut)
+        self.write(self.gut)
 
         # snapshot level
-        self.write(TURN if last_snapshot else SPLIT)
-        self.write(HOR)
-        self.write(HOR_END)
+        self.write(self.turn if last_snapshot else self.split)
+        self.write(self.hor)
+        self.write(self.hor_end)
 
         # details
         self.write(snapshot.timestamp.strftime('%Y-%m-%d %H:%M'))
@@ -139,9 +160,7 @@ class TreeRenderer(Renderer):
         else:
             self.write('-----------')
         self.write('  ')
-        self.write(snapshot.currency)
-        self.write(' ')
-        self.write('{s.price:>5}'.format(s=snapshot))
+        self.write(bold('{s.price:>5}'.format(s=snapshot)))
         self.writeln()
 
 
