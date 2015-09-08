@@ -309,6 +309,7 @@ def report(subs, common):
 
     report.add_argument(
         '-g', '--games',
+        nargs='*',
         help=('List of game ids to report. Reports all games if omitted')
     )
 
@@ -320,16 +321,16 @@ def report(subs, common):
 
     def do_report(application, options):
         if options.games:
-            reports = {}
+            reports = []
             for steamid in options.games:
                 app = App.by_steamid(steamid)
-                if not g:
+                if not app:
                     log.warning(
                         'Game with id {s!r} is not watched'.format(s=steamid))
                 else:
-                    reports = [
+                    reports.append(
                         (app, application.report(app, limit=options.limit)),
-                    ]
+                    )
         else:
             reports = application.report_all(limit=options.limit)
 

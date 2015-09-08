@@ -95,14 +95,40 @@ class Application(object):
                 ' but it was not watched.').format(a=appid))
             return
 
-        if delete and False:  #TODO '...and False' is temp
-            # TODO:
-            # find all packages that are associated to this app *only*
-            # delete Snapshots for these packages
-            # delete packages themselves
-            # delete the app
+        if delete:
+            log.debug('Delete {a!r}.'.format(a=app))
+            # packages linked to this app can be deleted
+            # only if they are not linked to another app
+            delete_pkgs = []
+            unlink_pkgs = []
+            log.debug('Find deletable packages.')
+            for pkg in app.packages:
+                no_delete = False
+                for linked_app in pkg.apps:
+                    if linked_app.id != app.id:
+                        log.debug(('{p!r} will not be deleted, it is also'
+                            ' linked to {a!r}.').format(p=pkg, a=linked_app))
+                        no_delete = True
+                if no_delete:
+                    unlink_pkgs.append(pkg)
+                else:
+                    delete_pkgs.append(pkg)
+
+            for unlinkable_pkg in unlink_pkgs:
+                app.unlink(unlinkable_pkg)
+
+            for deletable_pkg in delete_pkgs:
+                log.debug('Delete {p!r}.'.format(p=deletable_pkg))
+                # delete associated snapshots
+                for snapshot in deletable_pkg.snapshots:
+                    log.debug('Delete {s!r}.'.format(s=snapshot))
+                    snapshot.delete_instance()
+                # delete the package itself
+                deletable_pkg.delete_instance()
+
+            # finally, delete the app
             app.delete_instance()
-            log.info('Deleted {a.name!r}'.format(a=app))
+            log.info('Deleted {a.name!r}.'.format(a=app))
         else:
             app.disable()
             app.save()
@@ -117,7 +143,7 @@ class Application(object):
 
     def fetch_all(self):
         '''Update measures for all enabled Games.'''
-        apps = App.select().where(App.enabled == True)
+        apps = App.select().where(App.enabled==True)
         for app in apps:
             self.fetch(app)
 

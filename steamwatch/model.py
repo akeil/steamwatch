@@ -75,6 +75,12 @@ class App(BaseModel):
     def link(self, package):
         AppPackage.create(app=self, package=package)
 
+    def unlink(self, pkg):
+        log.debug('Unlink {p!r} from {s!r}.'.format(p=pkg, s=self))
+        link = self.app_packages.where(AppPackage.package==pkg).first()
+        # TODO: raise error if not linked?
+        link.delete_instance()
+
     def enable(self):
         self.enabled = True
 
