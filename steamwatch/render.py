@@ -10,6 +10,11 @@ Each renderer must implement
 '''
 import logging
 
+try:
+    import basestring
+except ImportError:
+    basestring = str
+
 
 log = logging.getLogger(__name__)
 
@@ -683,6 +688,128 @@ def neutral(text):
 
 def red(text):
     return '\033[22;31m' + text + '\033[0m'
+
+
+# Style -----------------------------------------------------------------------
+
+
+def Red(text):
+    return Style('33', text)
+
+
+def Bold(text):
+    return Style('1', text)
+
+
+class Style:
+    '''
+    https://en.wikipedia.org/wiki/ANSI_escape_code#graphics
+    https://github.com/lepture/terminal/
+
+    Color
+
+    Font Style
+    bold        1
+    dim         2
+    italic      3
+    underline   4
+
+    '''
+    ansi = None
+    ESC = '\033'
+    RESET = '\033[0m'
+
+
+    def __init__(self, code, item):
+        if isinstance(item, Style):
+            self.codes = item.codes + [code, ]
+            self.text = item.text
+        else:
+            self.codes = [code, ]
+            self.text = item
+
+    def copy_style(self, text):
+        # bit hacky
+        rv = Style(None, text)
+        rv.codes = self.codes
+        return rv
+
+    def __add__(self, other):
+        return str(self) + other
+
+    def __radd__(self, other):
+        return other + str(self)
+
+    def __mul__(self, factor):
+        return self.copy_style(factor * self.text)
+
+    def __rmul__(self, factor):
+        return self.__mul__(factor)
+
+    def __len__(self):
+        return len(self.text)
+
+    def __bool__(self):
+        return bool(self.text)
+
+    def __lt__(self, other):
+        return self.text < other
+
+    def __le__(self, other):
+        return self.text <= other
+
+    def __gt__(self, other):
+        return self.text > other
+
+    def __ge__(self, other):
+        return self.text >= other
+
+    def __eq__(self, other):
+        return self.text == other
+
+    def __getitem__(self, key):
+        return self.copy_style(self.text[key])
+
+    def join(self, arg):
+        return str(self).join(arg)
+
+    def __getattr__(self, name):
+        # attempt to implement string-methods
+        # by borrowing from the str class
+        # this should allod to call
+        #    Red('text').upper()
+        # and get 'TEXT'  (in red)
+        return _FunctionWrapper(self, getattr(str, name))
+
+    def __str__(self):
+        #if not self.should():
+        #    return self.raw()
+        if self.codes:
+            s = Style.ESC + '['
+            s += ';'.join(self.codes)
+            s += 'm'
+            s += self.text
+            s += Style.RESET
+            return s
+        else:
+            return self.text
+
+
+class _FunctionWrapper:
+
+    def __init__(self, style, func):
+        self.style = style
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        result = self.func(self.style.text, *args, **kwargs)
+        if isinstance(result, basestring):
+            return self.style.copy_style(result)
+        elif isinstance(result, list):
+            # str.split() seems to be the only special case
+            return [self.style.copy_style(s) for s in result]
+        else:
+            return result
 
 
 # RSSRenderer
