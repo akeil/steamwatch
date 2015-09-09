@@ -69,7 +69,7 @@ class Renderer:
         return dim(text, enabled=self.use_color)
 
     def neutral(self, text):
-        return self.text
+        return text
 
 
 class TreeRenderer(Renderer):
