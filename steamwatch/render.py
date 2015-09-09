@@ -24,6 +24,10 @@ class Renderer:
     def __init__(self, out, options):
         self.out = out
         self.options = options
+        try:
+            self.use_color = self.out.isatty()
+        except AttributeError:
+            self.use_color = False
 
     def render_ls(self, apps):
         pass
@@ -54,6 +58,18 @@ class Renderer:
         if text:
             self.write(text)
         self.write('\n')
+
+    def red(self, text):
+        return red(text, enabled=self.use_color)
+
+    def bold(self, text):
+        return bold(text, enabled=self.use_color)
+
+    def dim(self, text):
+        return dim(text, enabled=self.use_color)
+
+    def neutral(self, text):
+        return self.text
 
 
 class TreeRenderer(Renderer):
@@ -116,7 +132,7 @@ class TreeRenderer(Renderer):
         self.write(self.hor_end_bold)
 
         # app details
-        self.write(bold(app.name))
+        self.write(self.bold(app.name))
         self.write(' ')
         self.write(dim('[{s: >6}]'.format(s=app.steamid)))
         self.writeln()
@@ -135,7 +151,7 @@ class TreeRenderer(Renderer):
         # details
         self.write(pkg.name)
         self.write(' ')
-        self.write(dim('[{s: >6}]'.format(s=pkg.steamid)))
+        self.write(self.dim('[{s: >6}]'.format(s=pkg.steamid)))
         self.writeln()
 
     def _render_snapshot(self, snapshot, last_app, last_pkg, last_snapshot):
@@ -167,7 +183,7 @@ class TreeRenderer(Renderer):
         else:
             self.write('-----------')
         self.write('  ')
-        self.write(bold('{s.price:>5}'.format(s=snapshot)))
+        self.write(self.bold('{s.price:>5}'.format(s=snapshot)))
         self.writeln()
 
     def render_ls(self, apps):
@@ -194,12 +210,12 @@ class TreeRenderer(Renderer):
         self.write(self.hor_end)
 
         # details
-        self.write(dim('[{a.steamid: >6}]'.format(a=app)))
+        self.write(self.dim('[{a.steamid: >6}]'.format(a=app)))
         self.write(' ')
-        style = bold if app.enabled else red
+        style = self.bold if app.enabled else self.red
         self.write(style(app.name))
         if not app.enabled:
-            self.write(red(' (disabled)'))
+            self.write(self.red(' (disabled)'))
         self.writeln()
 
     def _render_package(self, pkg, last_app, last_pkg, app_enabled):
@@ -214,9 +230,9 @@ class TreeRenderer(Renderer):
         self.write(self.hor_end)
 
         # details
-        self.write(dim('[{p.steamid: >6}]'.format(p=pkg)))
+        self.write(self.dim('[{p.steamid: >6}]'.format(p=pkg)))
         self.write(' ')
-        style = neutral if app_enabled else dim
+        style = self.neutral if app_enabled else self.dim
         self.write(style(pkg.name))
         self.writeln()
 
@@ -484,12 +500,12 @@ class TabularRenderer(Renderer):
     def _render_app(self, app):
         self.write(self.left)
         self.write(' ')
-        self.write(dim('{s: >6}'.format(s=app.steamid)))
+        self.write(self.dim('{s: >6}'.format(s=app.steamid)))
         self.write(' ')
         self.write(self.center)
         self.write(' ')
         name = app.name
-        self.write(bold(name))
+        self.write(self.bold(name))
         w = 79 - 2 - 6 - 3 - 2 - len(name) + 1
         self.write(' ' * w)
         self.write(' ')
@@ -506,7 +522,7 @@ class TabularRenderer(Renderer):
             self.write(' ')
 
             if index == 0:
-                self.write(dim('{s: >6}'.format(s=pkg.steamid)))
+                self.write(self.dim('{s: >6}'.format(s=pkg.steamid)))
             elif index == 1:
                 name = pkg.name
                 if len(name) > col_widths[1]:
@@ -599,17 +615,17 @@ class TabularRenderer(Renderer):
             last = index == len(apps) - 1
             self.write(self.left)
             self.write(' ')
-            self.write(dim('{s: >6}'.format(s=app.steamid)))  # length of ID
+            self.write(self.dim('{s: >6}'.format(s=app.steamid)))  # length of ID
             self.write(' ')
             self.write(self.center)
             self.write(' ')
-            style = bold if app.enabled else neutral
+            style = self.bold if app.enabled else self.neutral
             self.write(style(app.name[:name_width]))
             self.write(' ' * max(0, name_width - len(app.name)))
             self.write(' ')
             self.write(self.center)
             self.write(' ')
-            self.write(' ' * 8 if app.enabled else red('disabled'))
+            self.write(' ' * 8 if app.enabled else self.red('disabled'))
             self.write(' ')
             self.write(self.right)
             self.writeln()
@@ -621,7 +637,7 @@ class TabularRenderer(Renderer):
                 self.write(' ')
                 self.write(self.center)
                 self.write(' ')
-                style = neutral if app.enabled else dim
+                style = self.neutral if app.enabled else self.dim
                 self.write(style(pkg.name[:name_width]))
                 self.write(' ' * max(0, name_width - len(pkg.name)))
                 self.write(' ')
@@ -682,7 +698,7 @@ def bold(text, **kwargs):
 
 
 def dim(text, **kwargs):
-    return Style(text, DIM)
+    return Style(text, DIM, **kwargs)
 
 
 def neutral(text):
