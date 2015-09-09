@@ -694,11 +694,38 @@ def red(text):
 
 
 def Red(text):
-    return Style('33', text)
+    return Style(text, FG_RED)
 
 
 def Bold(text):
-    return Style('1', text)
+    return Style(text, BOLD)
+
+
+NEUTRAL = '0'
+BOLD = '1'
+DIM = '2'
+
+ITALIC = '3'
+UNDERLINE = '4'
+STRIKETHROUGH = '9'  # not widely supported
+
+FG_BLACK = '30'
+FG_RED = '31'
+FG_GREEN = '32'
+FG_YELLOW = '33'
+FG_BLUE = '34'
+FG_MAGENTA = '35'
+FG_CYAN = '36'
+FG_WHITE = '37'
+
+BG_BLACK = '40'
+BG_RED = '41'
+BG_GREEN = '42'
+BG_YELLOW = '43'
+BG_BLUE = '44'
+BG_MAGENTA = '45'
+BG_CYAN = '46'
+BG_WHITE = '47'
 
 
 class Style:
@@ -715,24 +742,39 @@ class Style:
     underline   4
 
     '''
-    ansi = None
     ESC = '\033'
     RESET = '\033[0m'
 
-
-    def __init__(self, code, item):
+    def __init__(self, item, *codes):
+        codelist = [c for c in codes]
         if isinstance(item, Style):
-            self.codes = item.codes + [code, ]
+            self.codes = item.codes + codelist
             self.text = item.text
         else:
-            self.codes = [code, ]
+            self.codes = codelist
             self.text = item
 
     def copy_style(self, text):
-        # bit hacky
-        rv = Style(None, text)
-        rv.codes = self.codes
-        return rv
+        return Style(text, *self.codes)
+
+    # Builder interface
+
+    def bold(self):
+        self.codes.insert(0, BOLD)
+        return self
+
+    def dim(self):
+        self.codes.insert(0, DIM)
+        return self
+
+    def italic(self):
+        self.codes.insert(0, ITALIC)
+        return self
+
+    def underline(self):
+        self.codes.insert(0, UNDERLINE)
+
+    # str behaviour ----------------------------------------------------------
 
     def __add__(self, other):
         return str(self) + other
@@ -777,7 +819,7 @@ class Style:
         # attempt to implement string-methods
         # by borrowing from the str class
         # this should allod to call
-        #    Red('text').upper()
+        #         Red('text').upper()
         # and get 'TEXT'  (in red)
         return _FunctionWrapper(self, getattr(str, name))
 

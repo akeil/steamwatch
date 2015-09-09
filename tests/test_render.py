@@ -13,52 +13,52 @@ from steamwatch.render import Bold
 
 def test_simple():
     styled = str(Red('text'))
-    assert styled == '\033[33mtext\033[0m'
+    assert styled == '\033[31mtext\033[0m'
 
 
 def test_nested():
     styled = str(Red(Bold('text')))
-    assert (styled == '\033[33;1mtext\033[0m'
-        or styled == '\033[1;33mtext\033[0m')
+    assert (styled == '\033[31;1mtext\033[0m'
+        or styled == '\033[1;31mtext\033[0m')
 
 
 def test_left_concat():
     styled = Red('text')
     combined = 'normal ' + styled
-    assert combined == 'normal \033[33mtext\033[0m'
+    assert combined == 'normal \033[31mtext\033[0m'
 
 
 def test_styled_concat():
     styled = Red('text')
     also_styled = Bold('text')
     s = styled + also_styled
-    assert s == '\033[33mtext\033[0m' + '\033[1mtext\033[0m'
+    assert s == '\033[31mtext\033[0m' + '\033[1mtext\033[0m'
 
 
 def test_right_concat():
     styled = Red('text')
     combined = styled + ' normal'
-    assert combined == '\033[33mtext\033[0m normal'
+    assert combined == '\033[31mtext\033[0m normal'
 
 
 def test_plus_equals():
     styled = Red('text')
     styled += ' normal'
-    assert str(styled) == '\033[33mtext\033[0m normal'
+    assert str(styled) == '\033[31mtext\033[0m normal'
 
 
 def test_multiply():
     styled = Red('text')
-    assert str(3 * styled) == '\033[33m' + 'texttexttext' + '\033[0m'
+    assert str(3 * styled) == '\033[31m' + 'texttexttext' + '\033[0m'
 
     styled *= 3
-    assert str(styled) == '\033[33m' + 'texttexttext' + '\033[0m'
+    assert str(styled) == '\033[31m' + 'texttexttext' + '\033[0m'
 
 
 def test_multiply_nested():
     nested = Red(Bold('text'))
-    assert (str(3 * nested) == '\033[33;1mtexttexttext\033[0m'
-        or str(3 * nested) == '\033[1;33mtexttexttext\033[0m')
+    assert (str(3 * nested) == '\033[31;1mtexttexttext\033[0m'
+        or str(3 * nested) == '\033[1;31mtexttexttext\033[0m')
 
 
 def test_length():
@@ -110,36 +110,36 @@ def test_bool():
 
 def test_slice():
     styled = Red('abcd')
-    assert str(styled[0]) == '\033[33m' + 'a' + '\033[0m'
-    assert str(styled[1]) == '\033[33m' + 'b' + '\033[0m'
+    assert str(styled[0]) == '\033[31m' + 'a' + '\033[0m'
+    assert str(styled[1]) == '\033[31m' + 'b' + '\033[0m'
 
-    assert str(styled[-1]) == '\033[33m' + 'd' + '\033[0m'
-    assert str(styled[-2]) == '\033[33m' + 'c' + '\033[0m'
+    assert str(styled[-1]) == '\033[31m' + 'd' + '\033[0m'
+    assert str(styled[-2]) == '\033[31m' + 'c' + '\033[0m'
 
-    assert str(styled[:2]) == '\033[33m' + 'ab' + '\033[0m'
-    assert str(styled[2:]) == '\033[33m' + 'cd' + '\033[0m'
-    assert str(styled[1:3]) == '\033[33m' + 'bc' + '\033[0m'
+    assert str(styled[:2]) == '\033[31m' + 'ab' + '\033[0m'
+    assert str(styled[2:]) == '\033[31m' + 'cd' + '\033[0m'
+    assert str(styled[1:3]) == '\033[31m' + 'bc' + '\033[0m'
 
 
 def test_slice_nested():
     styled = Red(Bold('abcd'))
-    assert (str(styled[0]) == '\033[33;1m' + 'a' + '\033[0m'
-        or str(styled[0]) == '\033[1;33m' + 'a' + '\033[0m')
+    assert (str(styled[0]) == '\033[31;1m' + 'a' + '\033[0m'
+        or str(styled[0]) == '\033[1;31m' + 'a' + '\033[0m')
 
 
 def test_iter():
     unstyled = 'abcd'
     styled = Red(unstyled)
     for styled_char, unstyled_char in zip(styled, unstyled):
-        assert str(styled_char) == '\033[33m' + unstyled_char + '\033[0m'
+        assert str(styled_char) == '\033[31m' + unstyled_char + '\033[0m'
 
 
 def test_iter_nested():
     unstyled = 'abcd'
     styled = Red(Bold(unstyled))
     for styled_char, unstyled_char in zip(styled, unstyled):
-        assert (str(styled_char) == '\033[33;1m' + unstyled_char + '\033[0m'
-            or str(styled_char) == '\033[1;33m' + unstyled_char + '\033[0m')
+        assert (str(styled_char) == '\033[31;1m' + unstyled_char + '\033[0m'
+            or str(styled_char) == '\033[1;31m' + unstyled_char + '\033[0m')
 
 
 def test_str_functions():
@@ -160,17 +160,17 @@ def test_str_functions():
 
 def test_split():
     parts = Red('a b').split()
-    assert str(parts[0]) == '\033[33m' + 'a' + '\033[0m'
-    assert str(parts[1]) == '\033[33m' + 'b' + '\033[0m'
+    assert str(parts[0]) == '\033[31m' + 'a' + '\033[0m'
+    assert str(parts[1]) == '\033[31m' + 'b' + '\033[0m'
 
 
 def test_split_nested():
     parts = Bold(Red('a b')).split()
-    assert str(parts[0]) == '\033[33;1m' + 'a' + '\033[0m'
-    assert str(parts[1]) == '\033[33;1m' + 'b' + '\033[0m'
+    assert str(parts[0]) == '\033[31;1m' + 'a' + '\033[0m'
+    assert str(parts[1]) == '\033[31;1m' + 'b' + '\033[0m'
 
 
 def test_join():
     styled = Red('-')
     joined = styled.join(['a', 'b'])
-    assert joined == 'a' + '\033[33m' + '-' + '\033[0m' + 'b'
+    assert joined == 'a' + '\033[31m' + '-' + '\033[0m' + 'b'
