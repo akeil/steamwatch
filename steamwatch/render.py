@@ -693,12 +693,12 @@ def red(text):
 # Style -----------------------------------------------------------------------
 
 
-def Red(text):
-    return Style(text, FG_RED)
+def Red(text, **kwargs):
+    return Style(text, FG_RED, **kwargs)
 
 
-def Bold(text):
-    return Style(text, BOLD)
+def Bold(text, **kwargs):
+    return Style(text, BOLD, **kwargs)
 
 
 NEUTRAL = '0'
@@ -745,7 +745,7 @@ class Style:
     ESC = '\033'
     RESET = '\033[0m'
 
-    def __init__(self, item, *codes):
+    def __init__(self, item, *codes, **kwargs):
         codelist = [c for c in codes]
         if isinstance(item, Style):
             self.codes = item.codes + codelist
@@ -754,8 +754,10 @@ class Style:
             self.codes = codelist
             self.text = item
 
+        self.options = kwargs
+
     def copy_style(self, text):
-        return Style(text, *self.codes)
+        return Style(text, *self.codes, **self.options)
 
     # Builder interface
 
@@ -826,7 +828,7 @@ class Style:
     def __str__(self):
         #if not self.should():
         #    return self.raw()
-        if self.codes:
+        if self.codes and self.options.get('enabled', True):
             s = Style.ESC + '['
             s += ';'.join(self.codes)
             s += 'm'

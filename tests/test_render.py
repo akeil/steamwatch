@@ -21,6 +21,13 @@ def test_nested():
     assert (styled == '\033[31;1mtext\033[0m'
         or styled == '\033[1;31mtext\033[0m')
 
+def test_disable():
+    disabled = Red('text', enabled=False)
+    assert str(disabled) == 'text'  # no control chars
+
+    # passed on to new instances
+    assert str(disabled.copy_style('abc')) == 'abc'
+
 
 def test_left_concat():
     styled = Red('text')
