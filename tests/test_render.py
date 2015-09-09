@@ -7,22 +7,22 @@ import pytest
 
 # Style ----------------------------------------------------------------------
 
-from steamwatch.render import Red
-from steamwatch.render import Bold
+from steamwatch.render import red
+from steamwatch.render import bold
 
 
 def test_simple():
-    styled = str(Red('text'))
+    styled = str(red('text'))
     assert styled == '\033[31mtext\033[0m'
 
 
 def test_nested():
-    styled = str(Red(Bold('text')))
+    styled = str(red(bold('text')))
     assert (styled == '\033[31;1mtext\033[0m'
         or styled == '\033[1;31mtext\033[0m')
 
 def test_disable():
-    disabled = Red('text', enabled=False)
+    disabled = red('text', enabled=False)
     assert str(disabled) == 'text'  # no control chars
 
     # passed on to new instances
@@ -30,32 +30,32 @@ def test_disable():
 
 
 def test_left_concat():
-    styled = Red('text')
+    styled = red('text')
     combined = 'normal ' + styled
     assert combined == 'normal \033[31mtext\033[0m'
 
 
 def test_styled_concat():
-    styled = Red('text')
-    also_styled = Bold('text')
+    styled = red('text')
+    also_styled = bold('text')
     s = styled + also_styled
     assert s == '\033[31mtext\033[0m' + '\033[1mtext\033[0m'
 
 
 def test_right_concat():
-    styled = Red('text')
+    styled = red('text')
     combined = styled + ' normal'
     assert combined == '\033[31mtext\033[0m normal'
 
 
 def test_plus_equals():
-    styled = Red('text')
+    styled = red('text')
     styled += ' normal'
     assert str(styled) == '\033[31mtext\033[0m normal'
 
 
 def test_multiply():
-    styled = Red('text')
+    styled = red('text')
     assert str(3 * styled) == '\033[31m' + 'texttexttext' + '\033[0m'
 
     styled *= 3
@@ -63,25 +63,25 @@ def test_multiply():
 
 
 def test_multiply_nested():
-    nested = Red(Bold('text'))
+    nested = red(bold('text'))
     assert (str(3 * nested) == '\033[31;1mtexttexttext\033[0m'
         or str(3 * nested) == '\033[1;31mtexttexttext\033[0m')
 
 
 def test_length():
-    styled = Red('text')
+    styled = red('text')
     assert len(styled) == 4
 
-    empty = Red('')
+    empty = red('')
     assert len(empty) == 0
 
     with pytest.raises(TypeError):
-        len(Red(None))
+        len(red(None))
 
 
 def test_comparsion():
-    smaller = Red('a')
-    greater = Red('b')
+    smaller = red('a')
+    greater = red('b')
     assert smaller < greater
     assert smaller <= greater
     assert smaller != greater
@@ -90,8 +90,8 @@ def test_comparsion():
     assert not smaller == greater
 
     # different instances should be treated as equal
-    equal = Red('x')
-    twin = Red('x')
+    equal = red('x')
+    twin = red('x')
     assert not equal < twin
     assert not equal > twin
     assert not equal != twin
@@ -101,22 +101,22 @@ def test_comparsion():
 
 def test_equality_ignores_style():
     # for now, test for equality ignores different styles
-    assert Red('x') == Bold('x')
+    assert red('x') == bold('x')
 
 
 def test_bool():
-    content = Red('text')
+    content = red('text')
     assert bool(content) == True
 
-    empty = Red('')
+    empty = red('')
     assert bool(empty) == False
 
-    nothing = Red(None)
+    nothing = red(None)
     assert bool(nothing) == False
 
 
 def test_slice():
-    styled = Red('abcd')
+    styled = red('abcd')
     assert str(styled[0]) == '\033[31m' + 'a' + '\033[0m'
     assert str(styled[1]) == '\033[31m' + 'b' + '\033[0m'
 
@@ -129,55 +129,55 @@ def test_slice():
 
 
 def test_slice_nested():
-    styled = Red(Bold('abcd'))
+    styled = red(bold('abcd'))
     assert (str(styled[0]) == '\033[31;1m' + 'a' + '\033[0m'
         or str(styled[0]) == '\033[1;31m' + 'a' + '\033[0m')
 
 
 def test_iter():
     unstyled = 'abcd'
-    styled = Red(unstyled)
+    styled = red(unstyled)
     for styled_char, unstyled_char in zip(styled, unstyled):
         assert str(styled_char) == '\033[31m' + unstyled_char + '\033[0m'
 
 
 def test_iter_nested():
     unstyled = 'abcd'
-    styled = Red(Bold(unstyled))
+    styled = red(bold(unstyled))
     for styled_char, unstyled_char in zip(styled, unstyled):
         assert (str(styled_char) == '\033[31;1m' + unstyled_char + '\033[0m'
             or str(styled_char) == '\033[1;31m' + unstyled_char + '\033[0m')
 
 
 def test_str_functions():
-    assert Red('text').upper() == Red('TEXT')
-    assert Red('TEXT').lower() == Red('text')
+    assert red('text').upper() == red('TEXT')
+    assert red('TEXT').lower() == red('text')
 
     # with args
-    assert Red('text').replace('t', '_') == Red('_ex_')
+    assert red('text').replace('t', '_') == red('_ex_')
 
     # format
-    assert Red('{s}').format(s='text') == Red('text')
+    assert red('{s}').format(s='text') == red('text')
 
     # functions that do not return a new str
-    assert Red('text').isupper() == False
-    assert Red('TEXT').isupper() == True
-    assert Red('text').count('t') == 2
+    assert red('text').isupper() == False
+    assert red('TEXT').isupper() == True
+    assert red('text').count('t') == 2
 
 
 def test_split():
-    parts = Red('a b').split()
+    parts = red('a b').split()
     assert str(parts[0]) == '\033[31m' + 'a' + '\033[0m'
     assert str(parts[1]) == '\033[31m' + 'b' + '\033[0m'
 
 
 def test_split_nested():
-    parts = Bold(Red('a b')).split()
+    parts = bold(red('a b')).split()
     assert str(parts[0]) == '\033[31;1m' + 'a' + '\033[0m'
     assert str(parts[1]) == '\033[31;1m' + 'b' + '\033[0m'
 
 
 def test_join():
-    styled = Red('-')
+    styled = red('-')
     joined = styled.join(['a', 'b'])
     assert joined == 'a' + '\033[31m' + '-' + '\033[0m' + 'b'

@@ -674,31 +674,23 @@ class TabularRenderer(Renderer):
         return 'Yes' if v else 'No'
 
 
-def bold(text):
-    return '\033[1m' + text + '\033[0m'
+# Style -----------------------------------------------------------------------
 
 
-def dim(text):
-    return '\033[2m' + text + '\033[0m'
+def bold(text, **kwargs):
+    return Style(text, BOLD, **kwargs)
+
+
+def dim(text, **kwargs):
+    return Style(text, DIM)
 
 
 def neutral(text):
     return text
 
 
-def red(text):
-    return '\033[22;31m' + text + '\033[0m'
-
-
-# Style -----------------------------------------------------------------------
-
-
-def Red(text, **kwargs):
+def red(text, **kwargs):
     return Style(text, FG_RED, **kwargs)
-
-
-def Bold(text, **kwargs):
-    return Style(text, BOLD, **kwargs)
 
 
 NEUTRAL = '0'
@@ -775,6 +767,7 @@ class Style:
 
     def underline(self):
         self.codes.insert(0, UNDERLINE)
+        return self
 
     # str behaviour ----------------------------------------------------------
 
