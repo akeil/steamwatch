@@ -192,14 +192,12 @@ class Snapshot(BaseModel):
     @property
     def previous(self):
         '''Get the Snapshot that was recorded before this one.'''
-        select = Snapshot.select().where(Snapshot.package==self.package)
-        select.order_by(Snapshot.timestamp.desc())
-        if self.id:
-            # TODO only works if this is the most recent snapshot
-            select.offset(1).limit(1)
-        else:
-            select.limit(1)
-        return select.first()
+        return Snapshot.select().where(
+            Snapshot.package==self.package,
+            Snapshot.timestamp < self.timestamp
+        ).order_by(
+            Snapshot.timestamp.desc()
+        ).limit(1).first()
 
     def diff(self, other=None):
         '''Return the *diff* between this Snapshot and another snapshot.

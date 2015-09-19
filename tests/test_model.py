@@ -178,8 +178,47 @@ def test_snapshot_create():
     assert ss.id is None
 
 
-def test_snapshot_diff():
+def test_snapshot_previous():
     pkg = Package.create(steamid='9', kind='game')
+    other_pkg = Package.create(steamid='10', kind='game')
+    unrelated = Snapshot.create(
+        package=other_pkg,
+        timestamp=datetime.datetime(2015,9,19,9,0,0),  # before first
+        currency='EUR',
+        price=123,
+        supports_linux=True,
+    )
+    first = Snapshot.create(
+        package=pkg,
+        timestamp=datetime.datetime(2015,9,19,10,0,0),  # different
+        currency='EUR',
+        price=123,
+        supports_linux=True,
+    )
+    second = Snapshot.create(
+        package=pkg,
+        timestamp=datetime.datetime(2015,9,19,11,0,0),  # different
+        currency='EUR',
+        price=123,
+        supports_linux=True,
+    )
+    third = Snapshot.create(
+        package=pkg,
+        timestamp=datetime.datetime(2015,9,19,12,0,0),  # different
+        currency='EUR',
+        price=123,
+        supports_linux=True,
+    )
+
+    assert first.previous is None
+    assert second.previous == first
+    assert third.previous == second
+
+    assert second.previous.package == first.package
+
+
+def test_snapshot_diff():
+    pkg = Package.create(steamid='11', kind='game')
     apidata0 = {
         'price': {
             'currency': 'EUR',
