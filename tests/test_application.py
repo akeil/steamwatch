@@ -20,6 +20,7 @@ from steamwatch.model import App
 def app():
     options = argparse.Namespace()
     options.db_path = ':memory:'
+    options.country_code = 'de'
     app = application.Application(options)
     # db is initialized, insert sample data
     cur = model._db.get_cursor()
@@ -38,7 +39,7 @@ def app():
 @pytest.fixture
 def mockapi(monkeypatch):
 
-    def mock_appdetails(appid):
+    def mock_appdetails(appid, country_code=None):
         return {
             'type': 'game',
             'steam_appid': appid,

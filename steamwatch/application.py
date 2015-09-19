@@ -61,6 +61,7 @@ class Application(object):
 
     def __init__(self, options):
         self.options = options
+        self.country_code = options.country_code
         init_db(self.options.db_path)
 
     def watch(self, appid, threshold=None):
@@ -179,12 +180,18 @@ class Application(object):
             # raise error or update anyway (and skip disabled in fetch_all)
             return
 
-        appdata = storeapi.appdetails(app.steamid)
+        appdata = storeapi.appdetails(
+            app.steamid,
+            country_code=self.country_code
+        )
         found = appdata.get('packages', [])
         existing = {p.steamid: p for p in app.packages}
         for packageid in found:
             try:
-                pkgdata = storeapi.packagedetails(packageid)
+                pkgdata = storeapi.packagedetails(
+                    packageid,
+                    country_code=self.country_code
+                )
                 if packageid in existing:
                     pkg = existing[packageid]
                 else:

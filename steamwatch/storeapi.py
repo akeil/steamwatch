@@ -31,16 +31,21 @@ BASEURL = 'http://store.steampowered.com/api'
 log = logging.getLogger(__name__)
 
 
-def appdetails(appid):
+def appdetails(appid, country_code=None):
     '''Get details for a single steamapp.
 
-    :param int appid:
+    :param str appid:
         the appid
     :returns object:
         appdetails
     '''
-    query = urlencode({'appids': appid})
-    url = '{base}/appdetails?{query}'.format(base=BASEURL, query=query)
+    params = {'appids': appid}
+    if country_code:
+        params.update(cc=country_code)
+    url = '{base}/appdetails?{query}'.format(
+        base=BASEURL,
+        query=urlencode(params)
+    )
     response = _get(url)
     result = _readjson(response)
 
@@ -55,9 +60,14 @@ def appdetails(appid):
         return result[appid]['data']
 
 
-def packagedetails(packageid):
-    query = urlencode({'packageids': packageid})
-    url = '{base}/packagedetails?{query}'.format(base=BASEURL, query=query)
+def packagedetails(packageid, country_code=None):
+    params = {'packageids': packageid}
+    if country_code:
+        params.update(cc=country_code)
+    url = '{base}/packagedetails?{query}'.format(
+        base=BASEURL,
+        query=urlencode(params)
+    )
     response = _get(url)
     result = _readjson(response)
 
