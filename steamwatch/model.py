@@ -18,7 +18,7 @@ Each *App* will have at least one default package with the app as its single
 member.
 
 .. note::
-    Not sure whther this is guaranteed by the steam API.
+    Not sure whether this is guaranteed by the steam API.
     If not, we can create the default package ourselves.
 
 '''
@@ -69,32 +69,39 @@ class App(BaseModel):
     threshold = IntegerField(null=True)
 
     def link(self, package):
+        '''Link this App to the given :class:`Package`.'''
         # TODO raise error if already linked?
         AppPackage.create(app=self, package=package)
 
     def unlink(self, pkg):
+        '''Unlink this App from the given :class:`Package`.'''
         log.debug('Unlink {p!r} from {s!r}.'.format(p=pkg, s=self))
         link = self.app_packages.where(AppPackage.package==pkg).first()
         # TODO: raise error if not linked?
         link.delete_instance()
 
     def enable(self):
+        '''Enable this App. Only enabled Apps will be updated.'''
         self.enabled = True
 
     def disable(self):
+        '''Disable this App. No snapshots will be created for disabled apps.'''
         self.enabled = False
 
     @property
     def packages(self):
+        '''A list of :class:`Package` instances that are linked to this app.'''
         return [ap.package for ap in self.app_packages]
 
     @classmethod
     def by_steamid(cls, steamid):
-        '''Find an App by its ``steamid``'''
+        '''Find an App by its ``steamid``.'''
         return cls.select().where(cls.steamid==steamid).limit(1).first()
 
     @classmethod
     def from_apidata(cls, steamid, d, **extra):
+        '''Create an App with data from the ``storeapi``.
+        The new App instance is saved to the database.'''
         return cls.create(
             steamid=steamid,
             kind=d['type'],
@@ -108,6 +115,7 @@ class App(BaseModel):
 
 
 class Package(BaseModel):
+    '''A *Package* on the steam store.'''
 
     steamid = CharField(unique=True, index=True)
     name = CharField(null=True)
@@ -124,10 +132,13 @@ class Package(BaseModel):
             return ss
 
     def link(self, app):
+        '''Link this Package to an :calss:`App`.
+        This is the same as App.link(package).'''
         AppPackage.create(app=app, package=self)
 
     @property
     def apps(self):
+        '''A list of :class:`App` instances lnked to this package.'''
         return [ap.app for ap in self.app_packages]
 
     @classmethod
@@ -137,6 +148,8 @@ class Package(BaseModel):
 
     @classmethod
     def from_apidata(cls, steamid, d):
+        '''Create a Package with data from the ``storeapi``.
+        The newly created package is saved to the database.'''
         return cls.create(
             steamid=steamid,
             name=d.get('name')
@@ -147,6 +160,7 @@ class Package(BaseModel):
 
 
 class AppPackage(BaseModel):
+    '''Link between an :class:`App` and a :class:`Package`.'''
 
     app = ForeignKeyField(App, related_name='app_packages')
     package = ForeignKeyField(Package, related_name='app_packages')
@@ -162,6 +176,7 @@ class AppPackage(BaseModel):
 
 
 class Snapshot(BaseModel):
+    '''A snapshot of package related data.'''
 
     package = ForeignKeyField(Package, related_name='snapshots')
     timestamp = DateTimeField(index=True)
@@ -229,22 +244,32 @@ class Snapshot(BaseModel):
             'coming_soon', 'supports_linux')
         for field in fields:
             mine = getattr(self, field)
-            thine = getattr(other, field, None)  # in case `other` is None
+            # return None if `other` is None
+            thine = getattr(other, field, None)
             if mine != thine:
                 diffs.append((field, mine, thine))
 
         return diffs
 
     def is_different(self, other=None):
+        '''Tell if this snapshot is different to another snapshot.
+        The snapshot to compare against can be supplied (with ``other``).
+        If not supplied, we compare against the ``previous`` snapshot.
+
+        See ``diff()`` for a list of properties that are considered when
+        checking for differences.
+        '''
         return bool(self.diff(other=other))
 
     def __repr__(self):
         return '<Snapshot id={s.id!r} package={s.package!r}>'.format(s=self)
 
 
+# Helpers ---------------------------------------------------------------------
+
+
 # https://docs.python.org/3.3/library/datetime.html#strftime-and-strptime-behavior
-# expected: "30 May, 2014"
-DATEFORMAT = '%d %B, %Y'
+DATEFORMAT = '%d %B, %Y'  # e.g. "30 May, 2014"
 
 
 def _parse_date(datestr):
