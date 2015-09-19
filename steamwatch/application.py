@@ -176,28 +176,30 @@ class Application(object):
         if not app.enabled:
             log.warning('{a!r} is disabled and will not be updated.'.format(
                 a=app))
+            # TODO returning w/o saying anything is not ok
+            # raise error or update anyway (and skip disabled in fetch_all)
             return
 
         appdata = storeapi.appdetails(app.steamid)
         found = appdata.get('packages', [])
         existing = {p.steamid: p for p in app.packages}
-        for pid in found:
+        for packageid in found:
             try:
-                pkgdata = storeapi.packagedetails(pid)
-                if pid in existing:
-                    pkg = existing[pid]
+                pkgdata = storeapi.packagedetails(packageid)
+                if packageid in existing:
+                    pkg = existing[packageid]
                 else:
                     # might be present but not linked to this app
-                    pkg = Package.by_steamid(pid)
+                    pkg = Package.by_steamid(packageid)
                     if not pkg:
                         # not yet in db - create it
                         pkg = Package.from_apidata(pid, pkgdata)
                     pkg.link(app)
                     self._signal(SIGNAL_PACKAGE_LINKED, package=pkg, app=app)
 
-                ss = pkg.record_snapshot(pkgdata)
-                if ss:
-                    self._signal_changes(ss)
+                snapshot = pkg.record_snapshot(pkgdata)
+                if snapshot:
+                    self._signal_changes(snapshot)
             except GameNotFoundError:
                 continue
 
@@ -207,7 +209,7 @@ class Application(object):
                 FIELD_SIGNALS[field],
                 current=current,
                 previous=previous,
-                package=ss.package
+                package=snapshot.package
             )
 
     def report(self, app, limit=None):
