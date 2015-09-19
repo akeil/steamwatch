@@ -27,7 +27,6 @@ from datetime import datetime
 
 from peewee import Model
 from peewee import SqliteDatabase
-from peewee import SQL
 from peewee import CompositeKey
 from peewee import ForeignKeyField
 from peewee import CharField
@@ -70,6 +69,7 @@ class App(BaseModel):
     threshold = IntegerField(null=True)
 
     def link(self, package):
+        # TODO raise error if already linked?
         AppPackage.create(app=self, package=package)
 
     def unlink(self, pkg):

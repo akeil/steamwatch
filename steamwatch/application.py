@@ -162,8 +162,7 @@ class Application(object):
 
     def ls(self):
         '''List apps'''
-        select = App.select()  # all
-        return select.order_by(App.enabled.desc()).order_by(App.name)
+        return App.select().order_by(App.enabled.desc()).order_by(App.name)
 
     def fetch_all(self):
         '''Update measures for all enabled Games.'''
@@ -226,7 +225,7 @@ class Application(object):
         for package in app.packages:
             select = package.snapshots.order_by(Snapshot.timestamp.desc())
             if limit:
-                select.limit(limit)
+                select = select.limit(limit)
             results.append((package, [s for s in select]))
 
         return results
