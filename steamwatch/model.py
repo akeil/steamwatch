@@ -28,16 +28,13 @@ from datetime import datetime
 from peewee import Model
 from peewee import SqliteDatabase
 from peewee import SQL
-#from peewee import PrimaryKeyField
 from peewee import CompositeKey
 from peewee import ForeignKeyField
 from peewee import CharField
-#from peewee import TextField
 from peewee import DateField
 from peewee import DateTimeField
 from peewee import BooleanField
 from peewee import IntegerField
-#from peewee import FloatField
 
 
 log = logging.getLogger(__name__)
@@ -47,20 +44,20 @@ log = logging.getLogger(__name__)
 # model.db.init('sqlite://path/to/my/db')
 # see
 # https://peewee.readthedocs.org/en/latest/peewee/database.html#run-time-database-configuration
-db = SqliteDatabase(None)
+_db = SqliteDatabase(None)
 
 
 def init(db_path):
-    db.init(db_path)
-    db.connect()
-    db.create_tables([App, Package, AppPackage, Snapshot], safe=True)
+    _db.init(db_path)
+    _db.connect()
+    _db.create_tables([App, Package, AppPackage, Snapshot], safe=True)
 
 
 class BaseModel(Model):
 
     class Meta:
 
-        database = db
+        database = _db  # global
 
 
 class App(BaseModel):

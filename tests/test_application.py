@@ -22,7 +22,7 @@ def app():
     options.db_path = ':memory:'
     app = application.Application(options)
     # db is initialized, insert sample data
-    cur = model.db.get_cursor()
+    cur = model._db.get_cursor()
     cur.executemany(
         'insert into app (steamid, kind, enabled, name) values (?, ?, ?, ?)',
         (
