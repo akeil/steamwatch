@@ -199,7 +199,7 @@ class Application(object):
                     pkg = Package.by_steamid(packageid)
                     if not pkg:
                         # not yet in db - create it
-                        pkg = Package.from_apidata(pid, pkgdata)
+                        pkg = Package.from_apidata(packageid, pkgdata)
                     pkg.link(app)
                     self._signal(SIGNAL_PACKAGE_LINKED, package=pkg, app=app)
 
