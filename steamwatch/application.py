@@ -161,9 +161,12 @@ class Application(object):
 
         self._signal(SIGNAL_APP_REMOVED, app=app)
 
-    def ls(self):
+    def ls(self, include_disabled=False):
         '''List apps'''
-        return App.select().order_by(App.enabled.desc()).order_by(App.name)
+        if include_disabled:
+            return App.select().order_by(App.enabled.desc(), App.name)
+        else:
+            return App.select().where(App.enabled == True).order_by(App.name)
 
     def fetch_all(self):
         '''Update measures for all enabled Games.'''

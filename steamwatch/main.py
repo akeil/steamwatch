@@ -263,6 +263,12 @@ def ls(subs, common):
     )
 
     ls.add_argument(
+        '-a', '--all',
+        action='store_true',
+        help=('include disabled apps'),
+    )
+
+    ls.add_argument(
         '-f', '--format',
         choices=('tree', 'tab'),
         help='output format',
@@ -275,7 +281,7 @@ def ls(subs, common):
         }
         renderer_cls = renderers[options.format or options.list_format]
         renderer = renderer_cls(sys.stdout, options)
-        renderer.render_ls(app.ls())
+        renderer.render_ls(app.ls(include_disabled=options.all))
 
     ls.set_defaults(func=do_ls)
 
