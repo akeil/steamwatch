@@ -713,7 +713,171 @@ class TabularRenderer(Renderer):
         self.writeln()
 
     def render_recent(self, recent):
-        pass
+        '''Table with recent changes::
+
+            | Timestamp        | Package | Property | Old | New |
+            | yyyy-mm-dd hh:mm | Abc ... | Price    | 899 | 555 |
+            | ... |
+
+        '''
+        timestamp_width = 16
+        name_width = 36
+        prop_width = 8
+        value_width = 5
+
+        def grid():
+            self.write(self.left_split)
+            self.write(self.hor)
+            self.write(self.hor * timestamp_width)
+            self.write(self.hor)
+            self.write(self.cross)
+            self.write(self.hor)
+            self.write(self.hor * name_width)
+            self.write(self.hor)
+            self.write(self.cross)
+            self.write(self.hor)
+            self.write(self.hor * prop_width)
+            self.write(self.hor)
+            self.write(self.cross)
+            self.write(self.hor)
+            self.write(self.hor * value_width)
+            self.write(self.hor)
+            self.write(self.cross)
+            self.write(self.hor)
+            self.write(self.hor * value_width)
+            self.write(self.hor)
+            self.write(self.right_split)
+            self.writeln()
+
+        # header grid
+        self.write(self.top_left)
+        self.write(self.top)
+        self.write(self.top * timestamp_width)
+        self.write(self.top)
+        self.write(self.top_split)
+        self.write(self.top)
+        self.write(self.top * name_width)
+        self.write(self.top)
+        self.write(self.top_split)
+        self.write(self.top)
+        self.write(self.top * prop_width)
+        self.write(self.top)
+        self.write(self.top_split)
+        self.write(self.top)
+        self.write(self.top * value_width)
+        self.write(self.top)
+        self.write(self.top_split)
+        self.write(self.top)
+        self.write(self.top * value_width)
+        self.write(self.top)
+        self.write(self.top_right)
+        self.writeln()
+
+        # header
+        self.write(self.left)
+        self.write(' ')
+        self.write(_pad('Timestamp', timestamp_width))
+        self.write(' ')
+        self.write(self.center)
+        self.write(' ')
+        self.write(_pad('Name', name_width))
+        self.write(' ')
+        self.write(self.center)
+        self.write(' ')
+        self.write(_pad('Property', prop_width))
+        self.write(' ')
+        self.write(self.center)
+        self.write(' ')
+        self.write(_pad('Old', value_width))
+        self.write(' ')
+        self.write(self.center)
+        self.write(' ')
+        self.write(_pad('New', value_width))
+        self.write(' ')
+        self.write(self.right)
+        self.writeln()
+
+        grid()
+
+        snapshots = [ss for ss in recent]  # trigger query
+        for index, snapshot in enumerate(snapshots):
+            last_snapshot = index == len(snapshots) - 1
+            self.write(self.left)
+            self.write(' ')
+            self.write(_timestamp(snapshot.timestamp))
+            self.write(' ')
+            self.write(self.center)
+            self.write(' ')
+            self.write(_pad(snapshot.package.name, name_width))
+            self.write(' ')
+            self.write(self.center)
+            self.write(' ')
+            self.write(' ' * prop_width)
+            self.write(' ')
+            self.write(self.center)
+            self.write(' ')
+            self.write(' ' * value_width)
+            self.write(' ')
+            self.write(self.center)
+            self.write(' ')
+            self.write(' ' * value_width)
+            self.write(' ')
+            self.write(self.right)
+            self.writeln()
+
+            diffs = snapshot.diff()
+            last = (len(diffs) == 0) and last_snapshot
+            for diff_index, diff in enumerate(diffs):
+                last = (diff_index == len(diffs) - 1) and last_snapshot
+                self.write(self.left)
+                self.write(' ')
+                self.write(' ' * timestamp_width)
+                self.write(' ')
+                self.write(self.center)
+                self.write(' ')
+                self.write(' ' * name_width)
+                self.write(' ')
+                self.write(self.center)
+                self.write(' ')
+                self.write(_pad(diff[0], prop_width))
+                self.write(' ')
+                self.write(self.center)
+                self.write(' ')
+                self.write(_pad(diff[2], value_width))
+                self.write(' ')
+                self.write(self.center)
+                self.write(' ')
+                self.write(_pad(diff[1], value_width))
+                self.write(' ')
+                self.write(self.right)
+                self.writeln()
+
+            if not last:
+                grid()
+
+        # bottom grid
+        self.write(self.bottom_left)
+        self.write(self.bottom)
+        self.write(self.bottom * timestamp_width)
+        self.write(self.bottom)
+        self.write(self.bottom_split)
+        self.write(self.bottom)
+        self.write(self.bottom * name_width)
+        self.write(self.bottom)
+        self.write(self.bottom_split)
+        self.write(self.bottom)
+        self.write(self.bottom * prop_width)
+        self.write(self.bottom)
+        self.write(self.bottom_split)
+        self.write(self.bottom)
+        self.write(self.bottom * value_width)
+        self.write(self.bottom)
+        self.write(self.bottom_split)
+        self.write(self.bottom)
+        self.write(self.bottom * value_width)
+        self.write(self.bottom)
+        self.write(self.bottom_right)
+        self.writeln()
 
     @staticmethod
     def _timestamp(v):
@@ -740,6 +904,10 @@ class TabularRenderer(Renderer):
 
 # Formatters ------------------------------------------------------------------
 
+
+def _pad(v, length):
+    s = str(v)
+    return s[:length] + ' ' * max(0, (length - len(s)))
 
 def _timestamp(v):
     if v:
