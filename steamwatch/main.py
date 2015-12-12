@@ -389,13 +389,15 @@ def recent(subs, common):
     )
 
     def do_recent(application, options):
-        recent = application.recent(limit=options.limit)
+        recent = application.recent(
+            limit=options.limit or options.recent_limit
+        )
 
         renderers = {
             'tree': TreeRenderer,
             'tab': TabularRenderer
         }
-        renderer_cls = renderers[options.format or options.report_format]
+        renderer_cls = renderers[options.format or options.recent_format]
         renderer = renderer_cls(sys.stdout, options)
         renderer.render_recent(recent)
 
@@ -430,6 +432,7 @@ CFG_TYPES = {
     DEFAULT_CONFIG_SECTION: {
         'db_path': _path,
         'report_limit': int,
+        'recent_limit': int,
     },
 }
 
