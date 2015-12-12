@@ -125,6 +125,38 @@ def test_package_record_snapshot():
     assert package.snapshots.count() == 2
 
 
+def test_recent_snapshots():
+    package = Package.create(steamid='05', kind='game')
+    apidata0 = {
+        'price': {
+            'currency': 'EUR',
+            'final': 1500,
+        },
+        'platforms': {
+            'linux': True,
+        },
+        'release_date': {
+            'date': '02 September, 2015',
+            'coming_soon': True
+        }
+    }
+    apidata1 = apidata0.copy()
+    apidata1.update(price={'currency': 'EUR', 'final': 2000})
+    apidata2 = apidata0.copy()
+    apidata2.update(price={'currency': 'EUR', 'final': 2500})
+
+    ss0 = package.record_snapshot(apidata0)
+    ss1 = package.record_snapshot(apidata1)
+    ss2 = package.record_snapshot(apidata2)
+
+    assert ss0.timestamp != ss1.timestamp != ss2.timestamp  # precondition
+
+    recent = package.recent_snapshots(limit=2)
+    assert len(recent) == 2
+    assert recent[0].timestamp > recent[1].timestamp
+    assert recent[0].price == 2500
+
+
 # AppPackage ------------------------------------------------------------------
 
 
@@ -252,3 +284,38 @@ def test_snapshot_diff():
 
     ss2 = Snapshot.from_apidata(pkg, apidata1)
     assert not ss1.is_different(ss1)
+
+
+def test_snapshot_recent():
+    pkg0 = Package.create(steamid='12', kind='game')
+    pkg1 = Package.create(steamid='13', kind='game')
+    apidata0 = {
+        'price': {
+            'currency': 'EUR',
+            'final': 1500,
+        },
+        'platforms': {
+            'linux': True,
+        },
+        'release_date': {
+            'date': '02 September, 2015',
+            'coming_soon': True
+        }
+    }
+    apidata1 = apidata0.copy()
+    apidata1.update(price={'currency': 'EUR', 'final': 2000})
+
+    apidata2 = apidata0.copy()
+    apidata2.update(price={'currency': 'EUR', 'final': 3000})
+
+    apidata3 = apidata0.copy()
+    apidata3.update(price={'currency': 'EUR', 'final': 4000})
+
+    ss0 = pkg0.record_snapshot(apidata0)
+    ss1 = pkg1.record_snapshot(apidata1)
+    ss2 = pkg0.record_snapshot(apidata2)
+    ss3 = pkg1.record_snapshot(apidata3)
+
+    recent = Snapshot.recent(limit=3)
+    assert len(recent) == 3
+    assert recent[0].timestamp > recent[1].timestamp

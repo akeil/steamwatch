@@ -264,6 +264,11 @@ class Application(object):
 
         return results
 
+    def recent(self, limit=None):
+        '''List recent changes'''
+        return Snapshot.recent(limit=limit)
+
+
     def _signal(self, name, **data):
         log.debug('Emit {s!r}.'.format(s=name))
         for ep in iter_entry_points(EP_SIGNALS, name=name):

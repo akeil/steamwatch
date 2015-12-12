@@ -51,6 +51,9 @@ class Renderer:
         '''
         pass
 
+    def render_recent(self, recent):
+        pass
+
     def write(self, text):
         self.out.write(str(text))
 
@@ -235,6 +238,48 @@ class TreeRenderer(Renderer):
         style = self.neutral if app_enabled else self.dim
         self.write(style(pkg.name))
         self.writeln()
+
+    def render_recent(self, recent):
+        self.write('Recent Changes')
+        self.writeln()
+        snapshots = [ss for ss in recent]  # trigger query to determine length
+        for index, snapshot in enumerate(snapshots):
+            last_snapshot = index == len(snapshots) - 1
+            self._render_snapshot(snapshot, last_snapshot)
+
+    def _render_snapshot(self, snapshot, last_ss):
+        self.write(self.turn if last_ss else self.split)
+        self.write(self.hor)
+        self.write(self.hor)
+        self.write(self.split_down)
+        self.write(self.hor)
+        self.write(self.hor_end)
+
+        self.write(_timestamp(snapshot.timestamp))
+        self.writeln()
+
+        self.write(self.gut if last_ss else self.vert)
+        self.write(self.gut)
+        self.write(self.gut)
+        self.write(self.vert)
+        self.write(self.gut)
+        self.write(self.gut)
+        self.write(bold(snapshot.package.name))
+        self.writeln()
+
+        diffs = snapshot.diff()
+        for index, diff in enumerate(diffs):
+            last = index == len(diffs) - 1
+            self.write(self.gut if last_ss else self.vert)
+            self.write(self.gut)
+            self.write(self.gut)
+            self.write(self.turn if last else self.split)
+            self.write(self.hor)
+            self.write(self.hor_end)
+            self.write('{attr} changed from {old} to {new}'.format(
+                attr=diff[0], old=diff[2], new=diff[1])
+            )
+            self.writeln()
 
 
 class TabularRenderer(Renderer):
@@ -667,6 +712,9 @@ class TabularRenderer(Renderer):
         self.write(self.bottom_right)
         self.writeln()
 
+    def render_recent(self, recent):
+        pass
+
     @staticmethod
     def _timestamp(v):
         if v:
@@ -688,6 +736,16 @@ class TabularRenderer(Renderer):
     @staticmethod
     def _yesno(v):
         return 'Yes' if v else 'No'
+
+
+# Formatters ------------------------------------------------------------------
+
+
+def _timestamp(v):
+    if v:
+        return v.strftime('%Y-%m-%d %H:%M')
+    else:
+        return ''
 
 
 # Style -----------------------------------------------------------------------

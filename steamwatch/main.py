@@ -199,7 +199,7 @@ def setup_argparser():
     ls(subs, common)
     fetch(subs, common)
     report(subs, common)
-
+    recent(subs, common)
     return parser
 
 
@@ -368,6 +368,38 @@ def report(subs, common):
         renderer.render_report(reports)
 
     report.set_defaults(func=do_report)
+
+
+def recent(subs, common):
+    '''List recent changes'''
+    recent = subs.add_parser(
+        'recent',
+        parents=[common, ],
+        help='Show recent changes'
+    )
+    recent.add_argument(
+        '-n', '--limit',
+        type=int,
+        help='Limit the number of entries'
+    )
+    recent.add_argument(
+        '-f', '--format',
+        choices=('tree', 'tab'),
+        help='output format',
+    )
+
+    def do_recent(application, options):
+        recent = application.recent(limit=options.limit)
+
+        renderers = {
+            'tree': TreeRenderer,
+            'tab': TabularRenderer
+        }
+        renderer_cls = renderers[options.format or options.report_format]
+        renderer = renderer_cls(sys.stdout, options)
+        renderer.render_recent(recent)
+
+    recent.set_defaults(func=do_recent)
 
 
 # Argtypes --------------------------------------------------------------------

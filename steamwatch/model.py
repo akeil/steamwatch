@@ -132,9 +132,18 @@ class Package(BaseModel):
             return ss
 
     def link(self, app):
-        '''Link this Package to an :calss:`App`.
+        '''Link this Package to an :class:`App`.
         This is the same as App.link(package).'''
         AppPackage.create(app=app, package=self)
+
+    def recent_snapshots(self, limit=None):
+        '''Get a list of recent :class:`Snapshot`s for this *Package*.'''
+        query = (self.snapshots
+            .select()
+            .order_by(Snapshot.timestamp.desc())
+            .limit(limit or 1)
+        )
+        return [ss for ss in query]
 
     @property
     def apps(self):
@@ -260,6 +269,17 @@ class Snapshot(BaseModel):
         checking for differences.
         '''
         return bool(self.diff(other=other))
+
+    @classmethod
+    def recent(cls, limit=None):
+        query = (
+            cls.select(cls, Package)
+            .join(Package)
+            .order_by(cls.timestamp.desc())
+        )
+        if limit:
+            query = query.limit(limit)
+        return query
 
     def __repr__(self):
         return '<Snapshot id={s.id!r} package={s.package!r}>'.format(s=self)
