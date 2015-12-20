@@ -75,9 +75,12 @@ To see recent changes across all watched titles:
 
 Configuration
 #############
-steamwatch looks for a config file at
-- ``/etc/steamwatch.conf`` (global)
-- ``~/.config/steamwatch/steamwatch.conf`` (per user)
+Configuration files are:
+
+global:
+    ``/etc/steamwatch.conf``
+user:
+    ``~/.config/steamwatch/steamwatch.conf``
 
 You can set the following options,
 the example shows the default settings:
