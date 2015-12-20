@@ -205,13 +205,13 @@ class TreeRenderer(Renderer):
         apps = [a for a in apps]  # trigger query
         for app_index, app in enumerate(apps):
             last_app = app_index == len(apps) - 1
-            self._render_app(app, last_app)
+            self._render_app_ls(app, last_app)
             packages = [p for p in app.packages]  # trigger query
             for pkg_index, package in enumerate(packages):
                 last_pkg = pkg_index == len(packages) - 1
                 self._render_package(package, last_app, last_pkg, app.enabled)
 
-    def _render_app(self, app, last_app):
+    def _render_app_ls(self, app, last_app):
         # app level
         self.write(self.turn if last_app else self.split)
         self.write(self.hor)
@@ -253,9 +253,9 @@ class TreeRenderer(Renderer):
         snapshots = [ss for ss in recent]  # trigger query to determine length
         for index, snapshot in enumerate(snapshots):
             last_snapshot = index == len(snapshots) - 1
-            self._render_snapshot(snapshot, last_snapshot)
+            self._render_snapshot_recent(snapshot, last_snapshot)
 
-    def _render_snapshot(self, snapshot, last_ss):
+    def _render_snapshot_recent(self, snapshot, last_ss):
         self.write(self.turn if last_ss else self.split)
         self.write(self.hor)
         self.write(self.hor)
@@ -586,7 +586,7 @@ class TabularRenderer(Renderer):
                 value = self._get(column, snapshot)
                 width = col_widths[index]
                 self.write(value[:width])
-                self.write(' ' * max(0, width - len(v)))
+                self.write(' ' * max(0, width - len(value)))
 
             if index == len(self.columns) - 1:  # last
                 self.write(' ')
@@ -888,14 +888,14 @@ class TabularRenderer(Renderer):
 
     @staticmethod
     def _timestamp(value):
-        if v:
+        if value:
             return value.strftime('%Y-%m-%d %H:%M')
         else:
             return ''
 
     @staticmethod
     def _date(value):
-        if v:
+        if value:
             return value.strftime('%Y-%m-%d')
         else:
             return ''
@@ -918,7 +918,7 @@ def _pad(value, length):
 
 def _timestamp(value):
     if value:
-        return v.strftime('%Y-%m-%d %H:%M')
+        return value.strftime('%Y-%m-%d %H:%M')
     else:
         return ''
 

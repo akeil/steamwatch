@@ -525,7 +525,7 @@ def configure_logging(options):
         rootlog.addHandler(console_hdl)
 
     if options.logfile:
-        if logfile == 'syslog':
+        if options.logfile == 'syslog':
             logfile_hdl = handlers.SysLogHandler(address='/dev/log')
             logfile_hdl.setFormatter(logging.Formatter(SYSLOG_FMT))
         else:
