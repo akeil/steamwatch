@@ -58,6 +58,7 @@ FIELD_SIGNALS = {
 
 
 class Application(object):
+    '''Main application object.'''
 
     def __init__(self, options):
         self.options = options
@@ -82,7 +83,7 @@ class Application(object):
 
         if known and known.enabled:
             log.warning(('Attempted to add {a!r} to the watchlist'
-                ' but it is already being watched.').format(a=appid))
+                         ' but it is already being watched.').format(a=appid))
             app = known
         elif known:  # is disabled
             app = known
@@ -117,7 +118,7 @@ class Application(object):
         app = App.by_steamid(appid)
         if app is None:
             log.warning(('Attempted to remove {a!r} from the watchlist'
-                ' but it was not watched.').format(a=appid))
+                         ' but it was not watched.').format(a=appid))
             return
 
         if delete:
@@ -132,7 +133,8 @@ class Application(object):
                 for linked_app in pkg.apps:
                     if linked_app.id != app.id:
                         log.debug(('{p!r} will not be deleted, it is also'
-                            ' linked to {a!r}.').format(p=pkg, a=linked_app))
+                                   ' linked to {a!r}.'
+                                  ).format(p=pkg, a=linked_app))
                         no_delete = True
                 if no_delete:
                     unlink_pkgs.append(pkg)
@@ -170,7 +172,7 @@ class Application(object):
 
     def fetch_all(self):
         '''Update measures for all enabled Games.'''
-        apps = App.select().where(App.enabled==True)
+        apps = App.select().where(App.enabled == True)
         for app in apps:
             self.fetch(app)
 
@@ -271,25 +273,27 @@ class Application(object):
 
     def _signal(self, name, **data):
         log.debug('Emit {s!r}.'.format(s=name))
-        for ep in iter_entry_points(EP_SIGNALS, name=name):
+        for entry_point in iter_entry_points(EP_SIGNALS, name=name):
             try:
-                hook = ep.load()
-            except (ImportError, SyntaxError) as e:
-                log.error('Failed to load entry point {ep!r}'.format(ep=ep))
-                log.debug(e, exc_info=True)
+                hook = entry_point.load()
+            except (ImportError, SyntaxError) as err:
+                log.error(
+                    'Failed to load entry point {ep!r}'.format(ep=entry_point))
+                log.debug(err, exc_info=True)
                 continue
 
             try:
                 kwargs = {k: v for k, v in data.items()}
                 hook(name, self, **kwargs)
-                log.debug('Dispatched {n!r} to {ep!r}'.format(n=name, ep=ep))
-            except Exception as e:
+                log.debug(
+                    'Dispatched {n!r} to {ep!r}'.format(n=name, ep=entry_point))
+            except Exception as err:
                 log.error(('Failed to run entry point for {s!r}.'
-                    ' Error was: {e!r}').format(s=name, e=e))
-                log.debug(e, exc_info=True)
+                           ' Error was: {e!r}').format(s=name, e=err))
+                log.debug(err, exc_info=True)
 
 
 def log_signal(name, steamwatch, **kwargs):
     '''Default hook function for signals.'''
-    s = ', '.join(['{k}={v!r}'.format(k=k, v=v) for k, v in kwargs.items()])
-    log.debug('Signal {n!r} with {s!r}'.format(n=name, s=s))
+    logstr = ', '.join(['{k}={v!r}'.format(k=k, v=v) for k, v in kwargs.items()])
+    log.debug('Signal {n!r} with {s!r}'.format(n=name, s=logstr))

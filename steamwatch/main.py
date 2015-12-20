@@ -10,16 +10,16 @@ and runs the program.
 import argparse
 import io
 import logging
+from logging import handlers
 import os
 import sys
-
-from logging import handlers
-from pkg_resources import resource_stream
 
 try:
     import configparser  # python 3
 except ImportError:
     import ConfigParser as configparser  # python 2
+
+from pkg_resources import resource_stream
 
 import steamwatch
 from steamwatch import application
@@ -88,19 +88,19 @@ def main(argv=None):
 
     try:
         run(options)
-        rv = EXIT_OK
+        status = EXIT_OK
     except KeyboardInterrupt:
         raise
-    except Exception as e:
-        log.exception(e)
-        log.error(e)
-        rv = EXIT_ERROR
+    except Exception as err:
+        log.exception(err)
+        log.error(err)
+        status = EXIT_ERROR
     finally:
         # TODO perform cleanup
         pass
 
-    log.info('Exit with return code: {}.'.format(rv))
-    return rv
+    log.info('Exit with return code: {}.'.format(status))
+    return status
 
 
 def _log_options(options):
@@ -167,7 +167,7 @@ def setup_argparser():
     common.add_argument(
         '-l', '--logfile',
         help=('Write logs to the specified file. Use LOGFILE="syslog"'
-            ' to write logging output to syslog.')
+              ' to write logging output to syslog.')
     )
 
     loglevels = {
@@ -190,7 +190,7 @@ def setup_argparser():
         default=logging.WARNING,
         choices=loglevels.keys(),
         help=('Controls the log-level for LOGFILE.'
-            ' Defaults to {default}.').format(default=DEFAULT_LOG_LEVEL),
+              ' Defaults to {default}.').format(default=DEFAULT_LOG_LEVEL),
     )
 
     subs = parser.add_subparsers()
@@ -215,14 +215,14 @@ def watch(subs, common):
 
     watch.add_argument(
         'appid',
-        help=('The id of the game to watch')
+        help='The id of the game to watch'
     )
 
     watch.add_argument(
         '-t', '--threshold',
         metavar='PRICE',
         type=float,
-        help=('Receive a notification if the game drops below this price')
+        help='Receive a notification if the game drops below this price'
     )
 
     def do_watch(app, options):
@@ -240,13 +240,13 @@ def unwatch(subs, common):
 
     unwatch.add_argument(
         'appid',
-        help=('The id of the game to remove')
+        help='The id of the game to remove'
     )
 
     unwatch.add_argument(
         '-d', '--delete',
         action='store_true',
-        help=('Fully delete instead of disable the game.')
+        help='Fully delete instead of disable the game.'
     )
 
     def do_unwatch(app, options):
@@ -265,7 +265,7 @@ def ls(subs, common):
     ls.add_argument(
         '-a', '--all',
         action='store_true',
-        help=('include disabled apps'),
+        help='include disabled apps',
     )
 
     ls.add_argument(
@@ -301,7 +301,7 @@ def fetch(subs, common):
 
     fetch.add_argument(
         '-g', '--games',
-        help=('List of game ids to query. Queries all games if omitted')
+        help='List of game ids to query. Queries all games if omitted'
     )
 
     def do_fetch(application, options):
@@ -329,7 +329,7 @@ def report(subs, common):
     report.add_argument(
         '-g', '--games',
         nargs='*',
-        help=('List of game ids to report. Reports all games if omitted')
+        help='List of game ids to report. Reports all games if omitted'
     )
 
     report.add_argument(
@@ -458,26 +458,25 @@ def read_config():
 
     # default config from package
     cfg.readfp(io.TextIOWrapper(
-        resource_stream('steamwatch', 'default.conf'))
-    )
+        resource_stream('steamwatch', 'default.conf')))
 
     # system + user config from files
     read_from = cfg.read([SYSTEM_CONFIG_PATH, USER_CONFIG_PATH,])
 
-    def ns(name):
-        rv = None
+    def namespace(name):
+        result = None
         if name == DEFAULT_CONFIG_SECTION:
-            rv = root
+            result = root
         else:
             try:
-                rv = getattr(root, name)
+                result = getattr(root, name)
             except AttributeError:
-                rv = argparse.Namespace()
-                setattr(root, name, rv)
-        return rv
+                result = argparse.Namespace()
+                setattr(root, name, result)
+        return result
 
-    def identity(x):
-        return x
+    def identity(value):
+        return value
 
     # set config values on namespace(s)
     for section in cfg.sections():
@@ -485,10 +484,11 @@ def read_config():
             value = cfg.get(section, option)
             try:
                 conv = CFG_TYPES.get(section, {}).get(option, identity)
-                setattr(ns(section), option, conv(value))
+                setattr(namespace(section), option, conv(value))
             except (TypeError, ValueError):
                 log.error(('Failed to convert config value {v!r}'
-                    ' for {s!r}, {o!r}').format(s=section, o=option, v=value))
+                           ' for {s!r}, {o!r}'
+                          ).format(s=section, o=option, v=value))
 
     return root
 

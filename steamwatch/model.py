@@ -47,12 +47,19 @@ _db = SqliteDatabase(None)
 
 
 def init(db_path):
+    '''Initialize the SQLite DB at the given ``db_path``.
+
+    This should normally be called from the :class:`Application` on startup.
+    The DB file and tables inside the datebase will be created
+    if they do not exist.
+    '''
     _db.init(db_path)
     _db.connect()
     _db.create_tables([App, Package, AppPackage, Snapshot], safe=True)
 
 
 class BaseModel(Model):
+    '''Base class for all models, holds the reference to the databse.'''
 
     class Meta:
 
@@ -76,7 +83,7 @@ class App(BaseModel):
     def unlink(self, pkg):
         '''Unlink this App from the given :class:`Package`.'''
         log.debug('Unlink {p!r} from {s!r}.'.format(p=pkg, s=self))
-        link = self.app_packages.where(AppPackage.package==pkg).first()
+        link = self.app_packages.where(AppPackage.package == pkg).first()
         # TODO: raise error if not linked?
         link.delete_instance()
 
@@ -96,17 +103,17 @@ class App(BaseModel):
     @classmethod
     def by_steamid(cls, steamid):
         '''Find an App by its ``steamid``.'''
-        return cls.select().where(cls.steamid==steamid).limit(1).first()
+        return cls.select().where(cls.steamid == steamid).limit(1).first()
 
     @classmethod
-    def from_apidata(cls, steamid, d, **extra):
+    def from_apidata(cls, steamid, apidata, **extra):
         '''Create an App with data from the ``storeapi``.
         The new App instance is saved to the database.'''
         return cls.create(
             steamid=steamid,
-            kind=d['type'],
+            kind=apidata['type'],
             enabled=extra.get('enabled', True),
-            name=d.get('name'),
+            name=apidata.get('name'),
             threshold=extra.get('threshold'),
         )
 
@@ -120,16 +127,16 @@ class Package(BaseModel):
     steamid = CharField(unique=True, index=True)
     name = CharField(null=True)
 
-    def record_snapshot(self, data):
+    def record_snapshot(self, apidata):
         '''Record a Snapshot from the given api-data *only if* it is different
         from the previously recorded snapshot.
 
         Returns the Snapshot instance if one was created, else None.
         '''
-        ss = Snapshot.from_apidata(self, data)
-        if ss.is_different():  # to previous
-            ss.save()
-            return ss
+        snapshot = Snapshot.from_apidata(self, apidata)
+        if snapshot.is_different():  # to previous
+            snapshot.save()
+            return snapshot
 
     def link(self, app):
         '''Link this Package to an :class:`App`.
@@ -139,11 +146,11 @@ class Package(BaseModel):
     def recent_snapshots(self, limit=None):
         '''Get a list of recent :class:`Snapshot`s for this *Package*.'''
         query = (self.snapshots
-            .select()
-            .order_by(Snapshot.timestamp.desc())
-            .limit(limit or 1)
-        )
-        return [ss for ss in query]
+                 .select()
+                 .order_by(Snapshot.timestamp.desc())
+                 .limit(limit or 1)
+                )
+        return [snapshot for snapshot in query]
 
     @property
     def apps(self):
@@ -153,15 +160,15 @@ class Package(BaseModel):
     @classmethod
     def by_steamid(cls, steamid):
         '''Find a Package by its ``steamid``'''
-        return cls.select().where(cls.steamid==steamid).limit(1).first()
+        return cls.select().where(cls.steamid == steamid).limit(1).first()
 
     @classmethod
-    def from_apidata(cls, steamid, d):
+    def from_apidata(cls, steamid, apidata):
         '''Create a Package with data from the ``storeapi``.
         The newly created package is saved to the database.'''
         return cls.create(
             steamid=steamid,
-            name=d.get('name')
+            name=apidata.get('name')
         )
 
     def __repr__(self):
@@ -175,7 +182,6 @@ class AppPackage(BaseModel):
     package = ForeignKeyField(Package, related_name='app_packages')
 
     class Meta:
-
         # see
         # https://peewee.readthedocs.org/en/latest/peewee/models.html#non-integer-primary-keys-composite-keys-and-other-tricks
         primary_key = CompositeKey('app', 'package')
@@ -196,15 +202,15 @@ class Snapshot(BaseModel):
     supports_linux = BooleanField()
 
     @classmethod
-    def from_apidata(self, pkg, data):
+    def from_apidata(cls, pkg, data):
         '''Create a Snapshot instance with package details from the storeapi.
 
         The Snapshot is not saved to the database.
         '''
         price = data.get('price', {})
         release = data.get('release_date', {})
-        return Snapshot(
-            package = pkg,
+        return cls(
+            package=pkg,
             timestamp=datetime.utcnow(),
             currency=price.get('currency'),
             price=price.get('final'),
@@ -217,7 +223,7 @@ class Snapshot(BaseModel):
     def previous(self):
         '''Get the Snapshot that was recorded before this one.'''
         return Snapshot.select().where(
-            Snapshot.package==self.package,
+            Snapshot.package == self.package,
             Snapshot.timestamp < self.timestamp
         ).order_by(
             Snapshot.timestamp.desc()
@@ -250,7 +256,7 @@ class Snapshot(BaseModel):
 
         diffs = []
         fields = ('currency', 'price', 'release_date',
-            'coming_soon', 'supports_linux')
+                  'coming_soon', 'supports_linux')
         for field in fields:
             mine = getattr(self, field)
             # return None if `other` is None
@@ -272,6 +278,7 @@ class Snapshot(BaseModel):
 
     @classmethod
     def recent(cls, limit=None):
+        '''List recent snapshots and their associated packages.'''
         query = (
             cls.select(cls, Package)
             .join(Package)
