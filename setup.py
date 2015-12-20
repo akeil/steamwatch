@@ -48,9 +48,9 @@ setup(
     include_package_data=True,
     install_requires=requires,
     cmdclass={'test': PyTest,},
-    tests_require=['pytest', 'pytest-cov'],
+    tests_require=['pytest-cov'],
     extras_require={
-        'testing': ['pytest', 'pytest-cov'],
+        'testing': ['pytest-cov'],
     },
     license="BSD",
     zip_safe=True,
