@@ -1,4 +1,5 @@
 #-*- coding: utf-8 -*-
+# pylint: disable=logging-format-interpolation
 '''
 Main application module.
 
@@ -22,7 +23,6 @@ supports_linux_changed current, previous, package
 '''
 import logging
 
-from datetime import datetime
 from pkg_resources import iter_entry_points
 
 from steamwatch.exceptions import GameNotFoundError
@@ -293,7 +293,7 @@ class Application(object):
                 log.debug(err, exc_info=True)
 
 
-def log_signal(name, steamwatch, **kwargs):
+def log_signal(name, unused, **kwargs):  # pylint: disable=unused-argument
     '''Default hook function for signals.'''
     logstr = ', '.join(['{k}={v!r}'.format(k=k, v=v) for k, v in kwargs.items()])
     log.debug('Signal {n!r} with {s!r}'.format(n=name, s=logstr))

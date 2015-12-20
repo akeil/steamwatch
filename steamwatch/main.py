@@ -1,5 +1,6 @@
 #! /usr/bin/python
 # -*- coding: utf-8 -*-
+# pylint: disable=logging-format-interpolation
 '''
 Main entry point as defined in setup.py.
 
@@ -23,7 +24,6 @@ from pkg_resources import resource_stream
 
 import steamwatch
 from steamwatch import application
-from steamwatch.exceptions import ConfigurationError
 from steamwatch.model import App
 from steamwatch.render import TabularRenderer
 from steamwatch.render import TreeRenderer
@@ -207,18 +207,18 @@ def setup_argparser():
 
 
 def watch(subs, common):
-    watch = subs.add_parser(
+    parser = subs.add_parser(
         'watch',
         parents=[common, ],
         help='Add a game (appid) to watch'
     )
 
-    watch.add_argument(
+    parser.add_argument(
         'appid',
         help='The id of the game to watch'
     )
 
-    watch.add_argument(
+    parser.add_argument(
         '-t', '--threshold',
         metavar='PRICE',
         type=float,
@@ -228,22 +228,22 @@ def watch(subs, common):
     def do_watch(app, options):
         app.watch(options.appid, threshold=options.threshold)
 
-    watch.set_defaults(func=do_watch)
+    parser.set_defaults(func=do_watch)
 
 
 def unwatch(subs, common):
-    unwatch = subs.add_parser(
+    parser = subs.add_parser(
         'unwatch',
         parents=[common, ],
         help='Remove a game (appid) from the watchlist'
     )
 
-    unwatch.add_argument(
+    parser.add_argument(
         'appid',
         help='The id of the game to remove'
     )
 
-    unwatch.add_argument(
+    parser.add_argument(
         '-d', '--delete',
         action='store_true',
         help='Fully delete instead of disable the game.'
@@ -252,23 +252,23 @@ def unwatch(subs, common):
     def do_unwatch(app, options):
         app.unwatch(options.appid, delete=options.delete)
 
-    unwatch.set_defaults(func=do_unwatch)
+    parser.set_defaults(func=do_unwatch)
 
 
 def ls(subs, common):
-    ls = subs.add_parser(
+    parser = subs.add_parser(
         'ls',
         parents=[common, ],
         help='List watched games'
     )
 
-    ls.add_argument(
+    parser.add_argument(
         '-a', '--all',
         action='store_true',
         help='include disabled apps',
     )
 
-    ls.add_argument(
+    parser.add_argument(
         '-f', '--format',
         choices=('tree', 'tab'),
         help='output format',
@@ -283,81 +283,75 @@ def ls(subs, common):
         renderer = renderer_cls(sys.stdout, options)
         renderer.render_ls(app.ls(include_disabled=options.all))
 
-    ls.set_defaults(func=do_ls)
-
-
-def _render_apps(apps):
-    for app in apps:
-        print('{e} [{a.steamid: >6}] {a.name}'.format(
-            a=app, e='*' if app.enabled else '-'))
+    parser.set_defaults(func=do_ls)
 
 
 def fetch(subs, common):
-    fetch = subs.add_parser(
+    parser = subs.add_parser(
         'fetch',
         parents=[common, ],
         help='Fetch prices for watched games from steamstore'
     )
 
-    fetch.add_argument(
+    parser.add_argument(
         '-g', '--games',
         help='List of game ids to query. Queries all games if omitted'
     )
 
-    def do_fetch(application, options):
+    def do_fetch(app, options):
         if options.games:
             for steamid in options.games:
-                app = App.by_steamid(steamid)
-                if not app:
+                game = App.by_steamid(steamid)
+                if not game:
                     log.warning(
                         'Game with id {s!r} is not watched'.format(s=steamid))
                 else:
-                    application.fetch(app)
+                    app.fetch(game)
         else:
-            application.fetch_all()
+            app.fetch_all()
 
-    fetch.set_defaults(func=do_fetch)
+    parser.set_defaults(func=do_fetch)
 
 
 def report(subs, common):
-    report = subs.add_parser(
+    parser = subs.add_parser(
         'report',
         parents=[common, ],
         help='Show measures for watched apps'
     )
 
-    report.add_argument(
+    parser.add_argument(
         '-g', '--games',
         nargs='*',
         help='List of game ids to report. Reports all games if omitted'
     )
 
-    report.add_argument(
+    parser.add_argument(
         '-n', '--limit',
         type=int,
         help='Limit the number of entries per game'
     )
 
-    report.add_argument(
+    parser.add_argument(
         '-f', '--format',
         choices=('tree', 'tab'),
         help='output format',
     )
 
-    def do_report(application, options):
+    def do_report(app, options):
         if options.games:
             reports = []
             for steamid in options.games:
-                app = App.by_steamid(steamid)
-                if not app:
+                game = App.by_steamid(steamid)
+                if not game:
                     log.warning(
                         'Game with id {s!r} is not watched'.format(s=steamid))
                 else:
                     reports.append(
-                        (app, application.report(app, limit=options.limit)),
+                        (game, app.report(game, limit=options.limit)),
                     )
         else:
-            reports = application.report_all(limit=options.limit)
+            reports = app.report_all(limit=options.limit)
 
         renderers = {
             'tree': TreeRenderer,
@@ -367,29 +361,29 @@ def report(subs, common):
         renderer = renderer_cls(sys.stdout, options)
         renderer.render_report(reports)
 
-    report.set_defaults(func=do_report)
+    parser.set_defaults(func=do_report)
 
 
 def recent(subs, common):
     '''List recent changes'''
-    recent = subs.add_parser(
+    parser = subs.add_parser(
         'recent',
         parents=[common, ],
         help='Show recent changes'
     )
-    recent.add_argument(
+    parser.add_argument(
         '-n', '--limit',
         type=int,
         help='Limit the number of entries'
     )
-    recent.add_argument(
+    parser.add_argument(
         '-f', '--format',
         choices=('tree', 'tab'),
         help='output format',
     )
 
-    def do_recent(application, options):
-        recent = application.recent(
+    def do_recent(app, options):
+        snapshots = app.recent(
             limit=options.limit or options.recent_limit
         )
 
@@ -399,9 +393,9 @@ def recent(subs, common):
         }
         renderer_cls = renderers[options.format or options.recent_format]
         renderer = renderer_cls(sys.stdout, options)
-        renderer.render_recent(recent)
+        renderer.render_recent(snapshots)
 
-    recent.set_defaults(func=do_recent)
+    parser.set_defaults(func=do_recent)
 
 
 # Argtypes --------------------------------------------------------------------
@@ -457,11 +451,11 @@ def read_config():
     cfg = configparser.ConfigParser()
 
     # default config from package
-    cfg.readfp(io.TextIOWrapper(
+    cfg.read_file(io.TextIOWrapper(
         resource_stream('steamwatch', 'default.conf')))
 
     # system + user config from files
-    read_from = cfg.read([SYSTEM_CONFIG_PATH, USER_CONFIG_PATH,])
+    cfg.read([SYSTEM_CONFIG_PATH, USER_CONFIG_PATH,])
 
     def namespace(name):
         result = None

@@ -1,4 +1,5 @@
 #-*- coding: utf-8 -*-
+# pylint: disable=logging-format-interpolation
 '''
 Model classes for *steamwatch*.
 This mirrors the Steam Store data model

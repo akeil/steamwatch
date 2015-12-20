@@ -8,15 +8,10 @@ Each renderer must implement
 - render report
 
 '''
-import logging
-
 try:
     import basestring
 except ImportError:
     basestring = str
-
-
-log = logging.getLogger(__name__)
 
 
 class Renderer:
@@ -415,13 +410,13 @@ class TabularRenderer(Renderer):
         #TODO avalable space from self.options
         #TODO deal with insuffcient space
         num_cols = len(self.columns)
-        used_by_cols = 6+16+5+10+5
+        used_by_cols = 6 + 16 + 5 + 10 + 5
         used_by_grid = num_cols + 1 # grid lines
         # space around grid lines in inner grid (2) and outer (1)
         used_by_gutter = (num_cols - 1) * 2 + 2
         return (
             6,
-            79-(used_by_cols + used_by_grid + used_by_gutter),
+            available - (used_by_cols + used_by_grid + used_by_gutter),
             16, 6, 10, 5
         )
 
@@ -466,14 +461,15 @@ class TabularRenderer(Renderer):
 
 
     def _render_hgrid(self, col_widths):
-        for index, column in enumerate(self.columns):
+        num_columns = len(self.columns)
+        for index in range(num_columns):
             if index == 0:  # first
                 self.write(self.left_split)
 
             self.write(self.hor) # gutter
             self.write(self.hor * col_widths[index])
             self.write(self.hor) # gutter
-            if index == len(self.columns) - 1:  # last
+            if index == num_columns - 1:  # last
                 self.write(self.right_split)
             else:
                 self.write(self.cross)
@@ -481,14 +477,15 @@ class TabularRenderer(Renderer):
         self.writeln()
 
     def _render_body_grid_below_cellspan(self, col_widths):
-        for index, column in enumerate(self.columns):
+        num_columns = len(self.columns)
+        for index in range(num_columns):
             if index == 0:  # first
                 self.write(self.left_split)
 
             self.write(self.hor) # gutter
             self.write(self.hor * col_widths[index])
             self.write(self.hor) # gutter
-            if index == len(self.columns) - 1:  # last
+            if index == num_columns - 1:  # last
                 self.write(self.right_split)
             elif index == 0:
                 self.write(self.cross)
@@ -498,14 +495,15 @@ class TabularRenderer(Renderer):
         self.writeln()
 
     def _render_body_grid_above_cellspan(self, col_widths):
-        for index, column in enumerate(self.columns):
+        num_columns = len(self.columns)
+        for index in range(num_columns):
             if index == 0:  # first
                 self.write(self.left_split)
 
             self.write(self.hor) # gutter
             self.write(self.hor * col_widths[index])
             self.write(self.hor) # gutter
-            if index == len(self.columns) - 1:  # last
+            if index == num_columns - 1:  # last
                 self.write(self.right_split)
             elif index == 0:
                 self.write(self.cross)
