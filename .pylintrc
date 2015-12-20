@@ -1,0 +1,2 @@
+[MASTER]
+ignore = __version__.py __init__.py
