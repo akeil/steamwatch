@@ -61,6 +61,7 @@ def appdetails(appid, country_code=None):
 
 
 def packagedetails(packageid, country_code=None):
+    '''Get details for a single package.'''
     params = {'packageids': packageid}
     if country_code:
         params.update(cc=country_code)
@@ -84,18 +85,17 @@ def packagedetails(packageid, country_code=None):
 
 def _get(url):
     log.debug('GET {u!r}'.format(u=url))
-    # TODO proper error handling
+    # TODO proper error handling - or none
     try:
         response = urlopen(url)
-    except HTTPError as e:
-        raise e
-    except ContentTooShortError as e:
+    except HTTPError:
         raise
-    except URLError as e:
-        log.exception(e)
-        raise e
-    except Exception as e:
-        raise e
+    except ContentTooShortError:
+        raise
+    except URLError:
+        raise
+    except Exception:
+        raise
 
     log.debug('{} {}'.format(response.status, response.reason))
 

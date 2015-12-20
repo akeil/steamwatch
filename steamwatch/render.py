@@ -30,6 +30,7 @@ class Renderer:
             self.use_color = False
 
     def render_ls(self, apps):
+        '''Render the output for the ``ls`` command.'''
         pass
 
     def render_report(self, report):
@@ -52,26 +53,33 @@ class Renderer:
         pass
 
     def render_recent(self, recent):
+        '''Render the output for the ``recent`` command.'''
         pass
 
     def write(self, text):
+        '''Write the given text to ``self.out``.'''
         self.out.write(str(text))
 
     def writeln(self, text=None):
+        '''Write the given text to ``self.out``, append a newline.'''
         if text:
             self.write(text)
         self.write('\n')
 
     def red(self, text):
+        '''Color the given text *red*.'''
         return red(text, enabled=self.use_color)
 
     def bold(self, text):
+        '''Make the given text *bold*.'''
         return bold(text, enabled=self.use_color)
 
     def dim(self, text):
+        '''*dim* the given text.'''
         return dim(text, enabled=self.use_color)
 
     def neutral(self, text):
+        '''Undecorated text.'''
         return text
 
 
@@ -277,8 +285,7 @@ class TreeRenderer(Renderer):
             self.write(self.hor)
             self.write(self.hor_end)
             self.write('{attr} changed from {old} to {new}'.format(
-                attr=diff[0], old=diff[2], new=diff[1])
-            )
+                attr=diff[0], old=diff[2], new=diff[1]))
             self.writeln()
 
 
@@ -331,7 +338,7 @@ class TabularRenderer(Renderer):
             ('steamid', 'ID', 6, None),
             ('name', 'Name', None, None),
             ('timestamp', 'Timestamp', 16, TabularRenderer._timestamp),
-            ('supports_linux', 'Linux', 5,  TabularRenderer._yesno),
+            ('supports_linux', 'Linux', 5, TabularRenderer._yesno),
             ('release', 'Release', 10,  TabularRenderer._date),
             ('price', 'Price', 5, TabularRenderer._price),
         )
@@ -445,8 +452,8 @@ class TabularRenderer(Renderer):
                 self.write(' ')  # gutter
             label = column[1]
             self.write(label)
-            w = col_widths[index]
-            self.write(' ' * (w-len(label)))
+            width = col_widths[index]
+            self.write(' ' * (width - len(label)))
             self.write(' ')  # gutter
             if index >= len(self.columns) - 1:  # last
                 self.write(self.right)
@@ -455,7 +462,6 @@ class TabularRenderer(Renderer):
                 self.write(' ')  # gutter
 
         self.writeln()
-
         self._render_hgrid(col_widths)
 
 
@@ -528,12 +534,12 @@ class TabularRenderer(Renderer):
         self.writeln()
 
     def _render_bottom_grid(self, col_widths):
-        for index, w in enumerate(col_widths):
+        for index, width in enumerate(col_widths):
             if index == 0:
                 self.write(self.bottom_left)
 
             self.write(self.bottom) # gutter
-            self.write(self.bottom * w)
+            self.write(self.bottom * width)
             self.write(self.bottom) # gutter
 
             if index == len(col_widths) -1:
@@ -551,8 +557,9 @@ class TabularRenderer(Renderer):
         self.write(' ')
         name = app.name
         self.write(self.bold(name))
-        w = 79 - 2 - 6 - 3 - 2 - len(name) + 1
-        self.write(' ' * w)
+        #TODO remove hard-coded 79
+        width = 79 - 2 - 6 - 3 - 2 - len(name) + 1
+        self.write(' ' * width)
         self.write(' ')
         self.write(self.right)
         self.writeln()
@@ -576,10 +583,10 @@ class TabularRenderer(Renderer):
                 self.write(name)
                 self.write(' ' * max(0, col_widths[1] - len(name)))
             else:
-                v = self._get(column, snapshot)
-                w = col_widths[index]
-                self.write(v[:w])
-                self.write(' ' * max(0, w - len(v)))
+                value = self._get(column, snapshot)
+                width = col_widths[index]
+                self.write(value[:width])
+                self.write(' ' * max(0, width - len(v)))
 
             if index == len(self.columns) - 1:  # last
                 self.write(' ')
@@ -880,37 +887,37 @@ class TabularRenderer(Renderer):
         self.writeln()
 
     @staticmethod
-    def _timestamp(v):
+    def _timestamp(value):
         if v:
-            return v.strftime('%Y-%m-%d %H:%M')
+            return value.strftime('%Y-%m-%d %H:%M')
         else:
             return ''
 
     @staticmethod
-    def _date(v):
+    def _date(value):
         if v:
-            return v.strftime('%Y-%m-%d')
+            return value.strftime('%Y-%m-%d')
         else:
             return ''
 
     @staticmethod
-    def _price(v):
-        return '{v: >5}'.format(v=v)
+    def _price(value):
+        return '{v: >5}'.format(v=value)
 
     @staticmethod
-    def _yesno(v):
-        return 'Yes' if v else 'No'
+    def _yesno(value):
+        return 'Yes' if value else 'No'
 
 
 # Formatters ------------------------------------------------------------------
 
 
-def _pad(v, length):
-    s = str(v)
-    return s[:length] + ' ' * max(0, (length - len(s)))
+def _pad(value, length):
+    strvalue = str(value)
+    return strvalue[:length] + ' ' * max(0, (length - len(strvalue)))
 
-def _timestamp(v):
-    if v:
+def _timestamp(value):
+    if value:
         return v.strftime('%Y-%m-%d %H:%M')
     else:
         return ''
@@ -1064,12 +1071,12 @@ class Style:
         #if not self.should():
         #    return self.raw()
         if self.codes and self.options.get('enabled', True):
-            s = Style.ESC + '['
-            s += ';'.join(self.codes)
-            s += 'm'
-            s += self.text
-            s += Style.RESET
-            return s
+            styled = Style.ESC + '['
+            styled += ';'.join(self.codes)
+            styled += 'm'
+            styled += self.text
+            styled += Style.RESET
+            return styled
         else:
             return self.text
 
@@ -1089,9 +1096,3 @@ class _FunctionWrapper:
             return [self.style.copy_style(s) for s in result]
         else:
             return result
-
-
-# RSSRenderer
-# JSONRenderer
-# XMLRenderer
-# HTMLRenderer
