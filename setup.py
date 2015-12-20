@@ -25,7 +25,7 @@ class PyTest(TestCommand):
 
     def finalize_options(self):
         TestCommand.finalize_options(self)
-        self.test_args = []
+        self.test_args = ['--cov', 'steamwatch']
         self.test_suite = True
 
     def run_tests(self):
@@ -48,9 +48,9 @@ setup(
     include_package_data=True,
     install_requires=requires,
     cmdclass={'test': PyTest,},
-    tests_require=['pytest',],
+    tests_require=['pytest', 'pytest-cov'],
     extras_require={
-        'testing': ['pytest',],
+        'testing': ['pytest', 'pytest-cov'],
     },
     license="BSD",
     zip_safe=True,
