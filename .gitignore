@@ -27,6 +27,7 @@ pip-log.txt
 *.py,cover
 .tox
 .cache
+tools/*
 nosetests.xml
 
 # Translations
