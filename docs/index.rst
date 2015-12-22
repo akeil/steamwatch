@@ -3,8 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to steamwatch's documentation!
-======================================
+.. _Steam store: http://store.steampowered.com/
+
+
+steamwatch documentation
+========================
+*steamwatch* is a command line app to track prices of games available on the
+`Steam store`_.
 
 Contents:
 
@@ -12,10 +17,11 @@ Contents:
    :maxdepth: 2
 
    readme
-   installation
-   usage
+   entrypoints
 
    modules/application
+   modules/model
+   modules/storeapi
 
 Indices and tables
 ==================

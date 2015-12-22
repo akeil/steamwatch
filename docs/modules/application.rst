@@ -1,5 +1,5 @@
 ###########
-Application
+application
 ###########
 
 .. automodule:: steamwatch.application

@@ -4,11 +4,20 @@
 Main application module.
 
 Signals
--------
-THe follwoing signals are emitted:
+#######
+The :class:`Application` emits *Signals* when a game is added to
+or removed from the watchlist (:meth:`Application.watch`
+and :meth:`Application.unwatch`) and when a new :class:`Package` is discovered
+for a game.
 
+Additional signals are emitted when one of the tracked properties of a game
+changed during :meth:`Application.fetch`.
+
+The following signals are emitted:
+
+====================== ==========================
 Signal                 args
-====================== ===========================
+====================== ==========================
 app_added              app
 app_removed            app
 package_linked         package, app
@@ -61,22 +70,30 @@ class Application(object):
     '''Main application object.'''
 
     def __init__(self, options):
+        '''Create an Application instance with the given ``options``.
+
+        Initializes the database.
+        '''
         self.options = options
         self.country_code = options.country_code
         init_db(self.options.db_path)
 
     def watch(self, appid, threshold=None):
-        '''Start watching for changes on the steam item with the given
+        '''Start watching for changes on the steam game with the given
         ``appid``.
 
-        If this ``appid`` is new, it is added to the database.
+        - If this ``appid`` is new, it is added to the database.
+        - If the item is already in the database but is *disabled*, it is
+          *enabled*.
+        - If the item is already being watched, nothing happens.
 
-        If the item is already in the database but is *disabled*, it is
-        *enabled*.
+        Emits ``SIGNAL_APP_ADDED`` when the game is added/enabled.
 
-        If the item is already being watched, nothing happens.
-
-        Emits ``SIGNAL_APP_ADDED`` when the application is added/enabled.
+        :param str appid:
+            The steam app id of the game to watch.
+        :param int threshold:
+            *optional*
+            Price threshold (**not working**).
         '''
         should_update = False
         known = App.by_steamid(appid)
@@ -105,15 +122,21 @@ class Application(object):
         return app
 
     def unwatch(self, appid, delete=False):
-        '''Stop watching the game with the given appid.
+        '''Stop watching the game with the given ``appid``.
 
-        If the game is currently bein watched, it will be *disabled*,
-        unless the optional parameter ``delete`` is set to *True*
-        (which will completely remove the game and all measures.)
-
-        If the game is currently not being watched, nothing happens.
+        - If the game is currently bein watched, it will be *disabled*,
+          unless the optional parameter ``delete`` is set to *True*
+          (which will completely remove the game and all measures.)
+        - If the game is currently not being watched, nothing happens.
 
         Emits ``SIGNAL_APP_REMOVED`` when the application is deleted/disabled.
+
+        :param str appid:
+            The steam app id of the game to watch.
+        :param bool delete:
+            *optional*
+            if *True*, the game is deleted from the database.
+            If *False* (=default), it is disabled.
         '''
         app = App.by_steamid(appid)
         if app is None:
@@ -164,20 +187,29 @@ class Application(object):
         self._signal(SIGNAL_APP_REMOVED, app=app)
 
     def ls(self, include_disabled=False):
-        '''List apps'''
+        '''List games that re currently being watched.
+
+        :param bool include_disabled:
+            *optional*
+            if set to *True*, include *disabled* games in the list.
+            Else (=default), list only enabled apps.
+        :return:
+            *iterable* eith waztched :class:`App` instances
+        :rtype: iterable
+        '''
         if include_disabled:
             return App.select().order_by(App.enabled.desc(), App.name)
         else:
             return App.select().where(App.enabled == True).order_by(App.name)
 
-    def fetch_all(self):
-        '''Update measures for all enabled Games.'''
-        apps = App.select().where(App.enabled == True)
-        for app in apps:
-            self.fetch(app)
-
     def fetch(self, app):
-        '''Update measures for the given Game.'''
+        '''Fetch updates for the given game.
+
+        Emit the ``xxx_changed`` signals if a game's property is updated.
+
+        :param object app:
+            The :class:`App` to be updated.
+        '''
         if not app.enabled:
             log.warning('{a!r} is disabled and will not be updated.'.format(
                 a=app))
@@ -214,6 +246,12 @@ class Application(object):
             except GameNotFoundError:
                 continue
 
+    def fetch_all(self):
+        ''':meth:`fetch` updates for all enabled games.'''
+        apps = App.select().where(App.enabled == True)
+        for app in apps:
+            self.fetch(app)
+
     def _signal_changes(self, snapshot):
         for field, current, previous in snapshot.diff():
             self._signal(
@@ -226,12 +264,23 @@ class Application(object):
     def report(self, app, limit=None):
         '''List Snapshots for the given Game.
 
-        Returns a list of packages with their snapshots::
+        Returns a list of packages with their snapshots:
+
+        .. code:: python
 
             [
                 (<package-0>, [<snapshot-0>, <snapshot-1>, ...]),
                 (<package-1>, [<snapshot-0>, <snapshot-1>, ...]),
             ]
+
+        :param object app:
+            The :class:`App` instance for which the report should be generated.
+        :param int limit:
+            *optional*
+            Limit the number of results.
+        :returns:
+            A list of tuples with *Packages* and *Snapshots*.
+        :rtype: list
         '''
         results = []
         for package in app.packages:
@@ -243,9 +292,13 @@ class Application(object):
         return results
 
     def report_all(self, limit=None):
-        '''List Measures for all enabled Games.
+        ''':meth:`report` details for all enabled Games.
 
-        Returns a list of games with packages and snapshots::
+        This is similar to :meth:`report` but for all enabled games.
+
+        Returns a list of games with packages and snapshots:
+
+        .. code:: python
 
             [
                 (<game-0>, [
@@ -258,6 +311,11 @@ class Application(object):
                 ]),
                 ...
             ]
+
+        :param int limit:
+            *optional*
+            Limit the number of results.
+        :rtype: list
         '''
         apps = App.select().where(App.enabled == True).order_by(App.name)
         results = []
@@ -267,7 +325,16 @@ class Application(object):
         return results
 
     def recent(self, limit=None):
-        '''List recent changes'''
+        '''List recent changes.
+
+        :param int limit:
+            *optional*
+            limit the number of results.
+        :returns:
+            An iterable with recent :class:`Snapshot` instances,
+            ordered by timestamp.
+        :rtype: iterable
+        '''
         return Snapshot.recent(limit=limit)
 
 
@@ -294,6 +361,9 @@ class Application(object):
 
 
 def log_signal(name, unused, **kwargs):  # pylint: disable=unused-argument
-    '''Default hook function for signals.'''
+    '''Default hook function for signals.
+
+    Logs each emitted signal with ``DEBUG`` log level.
+    '''
     logstr = ', '.join(['{k}={v!r}'.format(k=k, v=v) for k, v in kwargs.items()])
     log.debug('Signal {n!r} with {s!r}'.format(n=name, s=logstr))

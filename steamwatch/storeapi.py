@@ -3,19 +3,15 @@
 '''
 Steam store HTTP API
 
-Methods
-#######
+**Endpoints:**
 
-appdetails
-==========
+- :func:`appdetails`
+- :func:`packagedetails`
 
-::
+.. note::
 
-    GET http://store.steampowered.com/api/appdetails/?appids={APPIDS}
-
-:appids:
-    a comma-separated list of *appids*, e.g. ``1230,10050``.
-
+    Although parameters are name ``appids``/``packageids`` (plural),
+    it is only possible to retrieve data for a single entity(?)
 '''
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -35,10 +31,18 @@ log = logging.getLogger(__name__)
 def appdetails(appid, country_code=None):
     '''Get details for a single steamapp.
 
+    This is a HTTP request to::
+
+        GET http://store.steampowered.com/api/appdetails/?appids=12345
+
     :param str appid:
-        the appid
-    :returns object:
-        appdetails
+        The appid.
+    param str country_code:
+        The country for which to fetch details.
+        Important for currency and country-specific prices/offers.
+    :returns:
+        A dict with appdetails.
+    :rtype: dict
     '''
     params = {'appids': appid}
     if country_code:
@@ -62,7 +66,21 @@ def appdetails(appid, country_code=None):
 
 
 def packagedetails(packageid, country_code=None):
-    '''Get details for a single package.'''
+    '''Get details for a single package.
+
+    This is a HTTP request to::
+
+        GET http://store.steampowered.com/api/packagedetails/?packageids=12345
+
+    :param str appid:
+        The package id.
+    param str country_code:
+        The country for which to fetch details.
+        Important for currency and country-specific prices/offers.
+    :returns:
+        A dict with package details.
+    :rtype: dict
+    '''
     params = {'packageids': packageid}
     if country_code:
         params.update(cc=country_code)
