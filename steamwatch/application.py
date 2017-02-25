@@ -221,7 +221,8 @@ class Application(object):
             app.steamid,
             country_code=self.country_code
         )
-        found = appdata.get('packages', [])
+        # `packages` may be string or int
+        found = [str(x) for x in appdata.get('packages', [])]
         existing = {p.steamid: p for p in app.packages}
         for packageid in found:
             try:
@@ -244,6 +245,7 @@ class Application(object):
                 if snapshot:
                     self._signal_changes(snapshot)
             except GameNotFoundError:
+                log.warning('Game not %s found.', packageid)
                 continue
 
     def fetch_all(self):
