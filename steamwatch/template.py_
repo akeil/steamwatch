@@ -5,6 +5,6 @@
 import logging
 
 
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 # code here

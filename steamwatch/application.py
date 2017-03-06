@@ -42,7 +42,7 @@ from steamwatch.model import Snapshot
 from steamwatch import storeapi
 
 
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 EP_SIGNALS = 'steamwatch.signals'
@@ -99,7 +99,7 @@ class Application(object):
         known = App.by_steamid(appid)
 
         if known and known.enabled:
-            log.warning(('Attempted to add {a!r} to the watchlist'
+            LOG.warning(('Attempted to add {a!r} to the watchlist'
                          ' but it is already being watched.').format(a=appid))
             app = known
         elif known:  # is disabled
@@ -115,7 +115,7 @@ class Application(object):
             should_update = True
 
         if should_update:
-            log.info('{a.name!r} was added to the watchlist.'.format(a=app))
+            LOG.info('{a.name!r} was added to the watchlist.'.format(a=app))
             self._signal(SIGNAL_APP_ADDED, app=app)
             self.fetch(app)
 
@@ -140,22 +140,22 @@ class Application(object):
         '''
         app = App.by_steamid(appid)
         if app is None:
-            log.warning(('Attempted to remove {a!r} from the watchlist'
+            LOG.warning(('Attempted to remove {a!r} from the watchlist'
                          ' but it was not watched.').format(a=appid))
             return
 
         if delete:
-            log.debug('Delete {a!r}.'.format(a=app))
+            LOG.debug('Delete {a!r}.'.format(a=app))
             # packages linked to this app can be deleted
             # only if they are not linked to another app
             delete_pkgs = []
             unlink_pkgs = []
-            log.debug('Find deletable packages.')
+            LOG.debug('Find deletable packages.')
             for pkg in app.packages:
                 no_delete = False
                 for linked_app in pkg.apps:
                     if linked_app.id != app.id:
-                        log.debug(('{p!r} will not be deleted, it is also'
+                        LOG.debug(('{p!r} will not be deleted, it is also'
                                    ' linked to {a!r}.'
                                   ).format(p=pkg, a=linked_app))
                         no_delete = True
@@ -168,21 +168,21 @@ class Application(object):
                 app.unlink(unlinkable_pkg)
 
             for deletable_pkg in delete_pkgs:
-                log.debug('Delete {p!r}.'.format(p=deletable_pkg))
+                LOG.debug('Delete {p!r}.'.format(p=deletable_pkg))
                 # delete associated snapshots
                 for snapshot in deletable_pkg.snapshots:
-                    log.debug('Delete {s!r}.'.format(s=snapshot))
+                    LOG.debug('Delete {s!r}.'.format(s=snapshot))
                     snapshot.delete_instance()
                 # delete the package itself
                 deletable_pkg.delete_instance()
 
             # finally, delete the app
             app.delete_instance()
-            log.info('Deleted {a.name!r}.'.format(a=app))
+            LOG.info('Deleted {a.name!r}.'.format(a=app))
         else:
             app.disable()
             app.save()
-            log.info('Disabled {a.name!r}'.format(a=app))
+            LOG.info('Disabled {a.name!r}'.format(a=app))
 
         self._signal(SIGNAL_APP_REMOVED, app=app)
 
@@ -211,7 +211,7 @@ class Application(object):
             The :class:`App` to be updated.
         '''
         if not app.enabled:
-            log.warning('{a!r} is disabled and will not be updated.'.format(
+            LOG.warning('{a!r} is disabled and will not be updated.'.format(
                 a=app))
             # TODO returning w/o saying anything is not ok
             # raise error or update anyway (and skip disabled in fetch_all)
@@ -245,7 +245,7 @@ class Application(object):
                 if snapshot:
                     self._signal_changes(snapshot)
             except GameNotFoundError:
-                log.warning('Game not %s found.', packageid)
+                LOG.warning('Game not %s found.', packageid)
                 continue
 
     def fetch_all(self):
@@ -341,25 +341,25 @@ class Application(object):
 
 
     def _signal(self, name, **data):
-        log.debug('Emit {s!r}.'.format(s=name))
+        LOG.debug('Emit {s!r}.'.format(s=name))
         for entry_point in iter_entry_points(EP_SIGNALS, name=name):
             try:
                 hook = entry_point.load()
             except (ImportError, SyntaxError) as err:
-                log.error(
+                LOG.error(
                     'Failed to load entry point {ep!r}'.format(ep=entry_point))
-                log.debug(err, exc_info=True)
+                LOG.debug(err, exc_info=True)
                 continue
 
             try:
                 kwargs = {k: v for k, v in data.items()}
                 hook(name, self, **kwargs)
-                log.debug(
+                LOG.debug(
                     'Dispatched {n!r} to {ep!r}'.format(n=name, ep=entry_point))
             except Exception as err:
-                log.error(('Failed to run entry point for {s!r}.'
+                LOG.error(('Failed to run entry point for {s!r}.'
                            ' Error was: {e!r}').format(s=name, e=err))
-                log.debug(err, exc_info=True)
+                LOG.debug(err, exc_info=True)
 
 
 def log_signal(name, unused, **kwargs):  # pylint: disable=unused-argument
@@ -368,4 +368,4 @@ def log_signal(name, unused, **kwargs):  # pylint: disable=unused-argument
     Logs each emitted signal with ``DEBUG`` log level.
     '''
     logstr = ', '.join(['{k}={v!r}'.format(k=k, v=v) for k, v in kwargs.items()])
-    log.debug('Signal {n!r} with {s!r}'.format(n=name, s=logstr))
+    LOG.debug('Signal {n!r} with {s!r}'.format(n=name, s=logstr))

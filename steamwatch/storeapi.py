@@ -25,7 +25,7 @@ from steamwatch.exceptions import GameNotFoundError
 
 
 BASEURL = 'http://store.steampowered.com/api'
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 def appdetails(appid, country_code=None):
@@ -103,7 +103,7 @@ def packagedetails(packageid, country_code=None):
 
 
 def _get(url):
-    log.debug('GET {u!r}'.format(u=url))
+    LOG.debug('GET {u!r}'.format(u=url))
     # TODO proper error handling - or none
     try:
         response = urlopen(url)
@@ -116,7 +116,7 @@ def _get(url):
     except Exception:
         raise
 
-    log.debug('{} {}'.format(response.status, response.reason))
+    LOG.debug('{} {}'.format(response.status, response.reason))
 
     if response.status not in (200,):
         raise ValueError('{} {}'.format(response.status, response.reason))
@@ -127,7 +127,7 @@ def _get(url):
 def _readjson(response):
     encoding = 'utf-8'  # default
     contenttype = response.getheader('Content-Type')
-    log.debug('Content-Type: {!r}'.format(contenttype))
+    LOG.debug('Content-Type: {!r}'.format(contenttype))
     if contenttype:
         try:
             # expected: application/json; charset=utf-8

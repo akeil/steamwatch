@@ -37,7 +37,7 @@ from peewee import BooleanField
 from peewee import IntegerField
 
 
-log = logging.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 
 # needs to be initialized externally, e.g.
@@ -101,7 +101,7 @@ class App(BaseModel):
 
     def unlink(self, pkg):
         '''Unlink this App from the given :class:`Package`.'''
-        log.debug('Unlink {p!r} from {s!r}.'.format(p=pkg, s=self))
+        LOG.debug('Unlink {p!r} from {s!r}.'.format(p=pkg, s=self))
         link = self.app_packages.where(AppPackage.package == pkg).first()
         # TODO: raise error if not linked?
         link.delete_instance()

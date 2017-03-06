@@ -51,7 +51,7 @@ EXIT_OK = 0
 EXIT_ERROR = 1
 
 
-log = logging.getLogger(PROG_NAME)
+LOG = logging.getLogger(PROG_NAME)
 
 
 def main(argv=None):
@@ -82,8 +82,8 @@ def main(argv=None):
     parser.parse_args(argv, namespace=options)
     configure_logging(options)
 
-    log.info('Starting {!r}.'.format(PROG_NAME))
-    log.debug('Command line: {!r}.'.format(' '.join(argv)))
+    LOG.info('Starting {!r}.'.format(PROG_NAME))
+    LOG.debug('Command line: {!r}.'.format(' '.join(argv)))
     _log_options(options)
 
     try:
@@ -92,24 +92,24 @@ def main(argv=None):
     except KeyboardInterrupt:
         raise
     except Exception as err:
-        log.exception(err)
-        log.error(err)
+        LOG.exception(err)
+        LOG.error(err)
         status = EXIT_ERROR
     finally:
         # TODO perform cleanup
         pass
 
-    log.info('Exit with return code: {}.'.format(status))
+    LOG.info('Exit with return code: {}.'.format(status))
     return status
 
 
 def _log_options(options):
     for k, v in vars(options).items():
         if isinstance(v, argparse.Namespace):
-            log.debug('Section {s!r}'.format(s=k))
+            LOG.debug('Section {s!r}'.format(s=k))
             _log_options(v)
         else:
-            log.debug('Option {k}: {v!r}'.format(k=k, v=v))
+            LOG.debug('Option {k}: {v!r}'.format(k=k, v=v))
 
 
 def run(options):
@@ -303,7 +303,7 @@ def fetch(subs, common):
             for steamid in options.games:
                 game = App.by_steamid(steamid)
                 if not game:
-                    log.warning(
+                    LOG.warning(
                         'Game with id {s!r} is not watched'.format(s=steamid))
                 else:
                     app.fetch(game)
@@ -344,7 +344,7 @@ def report(subs, common):
             for steamid in options.games:
                 game = App.by_steamid(steamid)
                 if not game:
-                    log.warning(
+                    LOG.warning(
                         'Game with id {s!r} is not watched'.format(s=steamid))
                 else:
                     reports.append(
@@ -480,7 +480,7 @@ def read_config():
                 conv = CFG_TYPES.get(section, {}).get(option, identity)
                 setattr(namespace(section), option, conv(value))
             except (TypeError, ValueError):
-                log.error(('Failed to convert config value {v!r}'
+                LOG.error(('Failed to convert config value {v!r}'
                            ' for {s!r}, {o!r}'
                           ).format(s=section, o=option, v=value))
 
