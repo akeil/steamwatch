@@ -1,5 +1,7 @@
 #-*- coding: utf-8 -*-
 # pylint: disable=logging-format-interpolation
+# comparsion to True is required by peewee as `foo == True`
+# pylint: disable=C0121
 '''
 Main application module.
 
@@ -186,7 +188,7 @@ class Application(object):
 
         self._signal(SIGNAL_APP_REMOVED, app=app)
 
-    def ls(self, include_disabled=False):
+    def ls(self, include_disabled=False):  # pylint: disable=invalid-name
         '''List games that re currently being watched.
 
         :param bool include_disabled:
@@ -199,8 +201,8 @@ class Application(object):
         '''
         if include_disabled:
             return App.select().order_by(App.enabled.desc(), App.name)
-        else:
-            return App.select().where(App.enabled == True).order_by(App.name)
+
+        return App.select().where(App.enabled == True).order_by(App.name)
 
     def fetch(self, app):
         '''Fetch updates for the given game.

@@ -104,12 +104,12 @@ def main(argv=None):
 
 
 def _log_options(options):
-    for k, v in vars(options).items():
-        if isinstance(v, argparse.Namespace):
-            LOG.debug('Section {s!r}'.format(s=k))
-            _log_options(v)
+    for key, value in vars(options).items():
+        if isinstance(value, argparse.Namespace):
+            LOG.debug('Section {s!r}'.format(s=key))
+            _log_options(value)
         else:
-            LOG.debug('Option {k}: {v!r}'.format(k=k, v=v))
+            LOG.debug('Option {k}: {v!r}'.format(k=key, v=value))
 
 
 def run(options):
@@ -178,7 +178,8 @@ def setup_argparser():
         'critical': logging.CRITICAL,
     }
 
-    class LogLevelAction(argparse.Action):
+    class LogLevelAction(argparse.Action):  # pylint: disable=too-few-public-methods
+        '''Set the Log level'''
 
         def __call__(self, parser, namespace, values, option_string=None):
             level = loglevels[values]
@@ -207,6 +208,7 @@ def setup_argparser():
 
 
 def watch(subs, common):
+    '''Set up command line arguments for the ``watch`` command.'''
     parser = subs.add_parser(
         'watch',
         parents=[common, ],
@@ -226,12 +228,14 @@ def watch(subs, common):
     )
 
     def do_watch(app, options):
+        '''Execute the ``watch`` command.'''
         app.watch(options.appid, threshold=options.threshold)
 
     parser.set_defaults(func=do_watch)
 
 
 def unwatch(subs, common):
+    '''Set up arguments for the ``unwatch`` command.'''
     parser = subs.add_parser(
         'unwatch',
         parents=[common, ],
@@ -250,12 +254,14 @@ def unwatch(subs, common):
     )
 
     def do_unwatch(app, options):
+        '''Execute the ``unwatch`` command.'''
         app.unwatch(options.appid, delete=options.delete)
 
     parser.set_defaults(func=do_unwatch)
 
 
-def ls(subs, common):
+def ls(subs, common):  # pylint: disable=invalid-name
+    '''Set up arguments for the ``ls`` command.'''
     parser = subs.add_parser(
         'ls',
         parents=[common, ],
@@ -275,6 +281,7 @@ def ls(subs, common):
     )
 
     def do_ls(app, options):
+        '''Execute the ``ls`` command.'''
         renderers = {
             'tree': TreeRenderer,
             'tab': TabularRenderer,
@@ -287,6 +294,7 @@ def ls(subs, common):
 
 
 def fetch(subs, common):
+    '''Set up arguments for the ``fetch`` command.'''
     parser = subs.add_parser(
         'fetch',
         parents=[common, ],
@@ -299,6 +307,7 @@ def fetch(subs, common):
     )
 
     def do_fetch(app, options):
+        '''Execute the ``fetch`` command.'''
         if options.games:
             for steamid in options.games:
                 game = App.by_steamid(steamid)
@@ -314,6 +323,7 @@ def fetch(subs, common):
 
 
 def report(subs, common):
+    '''Set up arguments for the ``report`` command.'''
     parser = subs.add_parser(
         'report',
         parents=[common, ],
@@ -339,6 +349,7 @@ def report(subs, common):
     )
 
     def do_report(app, options):
+        '''Execute the ``report`` command.'''
         if options.games:
             reports = []
             for steamid in options.games:
@@ -383,6 +394,7 @@ def recent(subs, common):
     )
 
     def do_recent(app, options):
+        '''Execute the ``recent`` command.'''
         snapshots = app.recent(
             limit=options.limit or options.recent_limit
         )
@@ -458,6 +470,9 @@ def read_config():
     cfg.read([SYSTEM_CONFIG_PATH, USER_CONFIG_PATH,])
 
     def namespace(name):
+        '''Get the *Namespace* with the given ``name`` from the ``root``
+        Namespace. Create a new Namespace if necessary.
+        '''
         result = None
         if name == DEFAULT_CONFIG_SECTION:
             result = root
@@ -470,6 +485,7 @@ def read_config():
         return result
 
     def identity(value):
+        '''Default conversion, returns ``value`` unchanged.'''
         return value
 
     # set config values on namespace(s)
