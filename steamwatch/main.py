@@ -27,6 +27,7 @@ from steamwatch import application
 from steamwatch.model import App
 from steamwatch.render import TabularRenderer
 from steamwatch.render import TreeRenderer
+from steamwatch.util import extract_appid
 
 PROG_NAME = 'steamwatch'
 VERSION = steamwatch.__version__
@@ -229,7 +230,8 @@ def watch(subs, common):
 
     def do_watch(app, options):
         '''Execute the ``watch`` command.'''
-        app.watch(options.appid, threshold=options.threshold)
+        appid = extract_appid(options.appid)
+        app.watch(appid, threshold=options.threshold)
 
     parser.set_defaults(func=do_watch)
 
@@ -255,7 +257,8 @@ def unwatch(subs, common):
 
     def do_unwatch(app, options):
         '''Execute the ``unwatch`` command.'''
-        app.unwatch(options.appid, delete=options.delete)
+        appid = extract_appid(options.appid)
+        app.unwatch(appid, delete=options.delete)
 
     parser.set_defaults(func=do_unwatch)
 
@@ -309,7 +312,8 @@ def fetch(subs, common):
     def do_fetch(app, options):
         '''Execute the ``fetch`` command.'''
         if options.games:
-            for steamid in options.games:
+            for identifier in options.games:
+                steamid = extract_appid(identifier)
                 game = App.by_steamid(steamid)
                 if not game:
                     LOG.warning(
@@ -352,7 +356,8 @@ def report(subs, common):
         '''Execute the ``report`` command.'''
         if options.games:
             reports = []
-            for steamid in options.games:
+            for identifier in options.games:
+                steamid = extract_appid(identifier)
                 game = App.by_steamid(steamid)
                 if not game:
                     LOG.warning(
